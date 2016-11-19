@@ -1,0 +1,33 @@
+#cloud-config
+
+users:
+- name: gcer
+  uid: 2000
+
+write_files:
+- path: /etc/systemd/system/shinyserver.service
+  permissions: 0644
+  owner: root
+  content: |
+    [Unit]
+    Description=Shiny Server
+    Requires=docker.service
+    After=docker.service
+
+    [Service]
+    Restart=always
+    Environment="HOME=/home/gcer"
+    ExecStartPre=/usr/share/google/dockercfg_update.sh
+    ExecStart=/usr/bin/docker run -e "R_LIBS_USER=/library/" \
+                                  -v /home/gcer/library/:/library/ \
+                                  --name=shinyserver \
+                                  -p 80:3838 \
+                                  -v /home/gcer/shinyapps/:/srv/shiny-server/gcer/ \
+                                  -v /home/gcer/shinylog/:/var/log/ \
+                                  -v /home/gcer/library/:/library/ \
+                                  %s
+    ExecStop=/usr/bin/docker stop shiny
+
+runcmd:
+- systemctl daemon-reload
+- systemctl start shinyserver.service
