@@ -12,7 +12,7 @@ gce_make_network(name, network = "default", externalIP = NULL,
 
 \item{network}{Name of network resource}
 
-\item{externalIP}{An external IP you have created previouly, leave NULL to have one assigned or "none" for none}
+\item{externalIP}{An external IP you have created previously, leave NULL to have one assigned or "none" for none}
 
 \item{project}{Project ID for this request
 
@@ -25,4 +25,3 @@ A Network object
 Make a network interface for instance creation
 }
 \keyword{internal}
-

@@ -7,7 +7,7 @@
 Instance(name = NULL, machineType = NULL, canIpForward = NULL,
   description = NULL, disks = NULL, metadata = NULL,
   networkInterfaces = NULL, scheduling = NULL, serviceAccounts = NULL,
-  tags = NULL)
+  tags = NULL, guestAccelerators = NULL)
 }
 \arguments{
 \item{name}{The name of the resource, provided by the client when initially creating the resource}
@@ -24,7 +24,7 @@ Instance(name = NULL, machineType = NULL, canIpForward = NULL,
 
 \item{networkInterfaces}{An array of configurations for this interface}
 
-\item{scheduling}{Scheduling options for this instance}
+\item{scheduling}{Scheduling options for this instance, such as preemptible instances}
 
 \item{serviceAccounts}{A list of service accounts, with their specified scopes, authorized for this instance}
 
@@ -40,4 +40,3 @@ Instance Object
 An Instance resource.
 }
 \keyword{internal}
-

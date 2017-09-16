@@ -9,7 +9,7 @@ gce_rstudio_password(instance, username, password, container = "rstudio")
 \arguments{
 \item{instance}{An instance with RStudio installed via \link{gce_vm_template}}
 
-\item{username}{The user to chnage the password for}
+\item{username}{The user to change the password for}
 
 \item{password}{The user password}
 
@@ -21,4 +21,3 @@ The instance
 \description{
 RStudio has users based on unix user accounts
 }
-

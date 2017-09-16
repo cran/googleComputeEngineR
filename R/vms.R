@@ -1,21 +1,25 @@
 #' Create or fetch a virtual machine
 #' 
-#' Pass in the instance name to fetch its object, or create the instance.
+#' Pass in the instance name to fetch its object, or create the instance via \link{gce_vm_create}.
 #' 
 #' @inheritParams gce_vm_create
 #' @param name The name of the instance
-#' @param ... Other arguments passed to create an instance if it doesn't exist
-#' 
+#' @param open_webports If TRUE, will open firewall ports 80 and 443 if not open already
+#' @inheritDotParams gce_vm_create 
 #' @details 
 #' 
 #' Will get or create the instance as specified.  Will wait for instance to be created if necessary.
 #' 
-#' Make sure the instance is big enough to handle what you need, for instance the default "f1-micro" will hang the instance 
-#' when trying to install certain R libraries.
+#' Make sure the instance is big enough to handle what you need, 
+#'   for instance the default \code{f1-micro} will hang the instance when trying to install large R libraries.
 #' 
 #' @section Creation logic:
 #' 
 #' You need these parameters defined to call the right function for creation.  Check the function definitions for more details. 
+#' 
+#' If the VM name exists but is not running, it start the VM and return the VM object
+#' 
+#' If the VM is running, it will return the VM object
 #' 
 #' If you specify the argument \code{template} it will call \link{gce_vm_template}
 #' 
@@ -25,16 +29,53 @@
 #' 
 #' @return A \code{gce_instance} object
 #' 
+#' @examples 
+#' 
+#' \dontrun{
+#' 
+#' library(googleComputeEngineR)
+#' ## auto auth, project and zone pre-set
+#' ## list your VMs in the project/zone
+#' 
+#' the_list <- gce_list_instances()
+#' 
+#' ## start an existing instance
+#' vm <- gce_vm("markdev")
+#' 
+#' ## for rstudio, you also need to specify a username and password to login
+#' vm <- gce_vm(template = "rstudio",
+#'              name = "rstudio-server",
+#'              username = "mark", password = "mark1234")
+#' 
+#' ## specify your own cloud-init file and pass it into gce_vm_container()
+#' vm <- gce_vm(cloud_init = "example.yml",
+#'              name = "test-container",
+#'              predefined_type = "f1-micro")
+#' 
+#' ## specify disk size at creation
+#' vm <- gce_vm('my-image3', disk_size_gb = 20)
+#' 
+#' 
+#' }
+#' 
 #' @export
 gce_vm <- function(name, 
                    ...,                           
                    project = gce_get_global_project(), 
-                   zone = gce_get_global_zone() ) {
-  
-  if(inherits(name, "gce_instance")){
+                   zone = gce_get_global_zone(),
+                   open_webports = TRUE) {
+
+  if(is.gce_instance(name)){
     myMessage("Refreshing instance data", level = 3)
     name <- name$name
   }
+  
+  assertthat::assert_that(
+    assertthat::is.string(name),
+    assertthat::is.string(project),
+    assertthat::is.string(zone),
+    is.logical(open_webports)
+  )
   
   stopped <- gce_list_instances("status eq TERMINATED", project = project, zone = zone)
   
@@ -71,6 +112,11 @@ gce_vm <- function(name,
     }
   })
   
+  ## check firewalls
+  if(open_webports){
+    gce_make_firewall_webports(project = project)
+  }
+  
   myMessage("VM running", level = 3)
   vm
 }
@@ -99,6 +145,11 @@ gce_vm_delete <- function(instance,
                           zone = gce_get_global_zone() 
                           ) {
 
+  assertthat::assert_that(
+    assertthat::is.string(project),
+    assertthat::is.string(zone)
+  )
+  
   url <- sprintf("https://www.googleapis.com/compute/v1/projects/%s/zones/%s/instances/%s", 
                  project, zone, as.gce_instance_name(instance))
   # compute.instances.delete
@@ -143,6 +194,12 @@ gce_vm_delete <- function(instance,
 #'  
 #'  If you want to not have an external IP then modify the instance afterwards
 #' 
+#' @section Preemptible VMS: 
+#' 
+#' You can set \href{https://cloud.google.com/compute/docs/instances/create-start-preemptible-instance}{preemptible} VMs by passing this in the \code{scheduling} arguments \code{scheduling = list(preemptible = TRUE)}
+#'  
+#' This creates a VM that may be shut down prematurely by Google - you will need to sort out how to save state if that happens in a shutdown script etc.  However, these are much cheaper. 
+#' 
 #' 
 #' @inheritParams Instance
 #' @inheritParams gce_make_machinetype_url
@@ -156,6 +213,10 @@ gce_vm_delete <- function(instance,
 #' @param zone The name of the zone for this request
 #' @param dry_run whether to just create the request JSON
 #' @param auth_email If it includes '@' then assume the email, otherwise an environment file var that includes the email
+#' @param disk_size_gb If not NULL, override default size of the boot disk (size in GB) 
+#' @param use_beta If set to TRUE will use the beta version of the API. Should not be used for production purposes.
+#' @param acceleratorCount \code{[BETA]} Number of GPUs to add to instance
+#' @param acceleratorType \code{[BETA]} Name of GPU to add, see \link{gce_list_gpus}
 #' 
 #' @return A zone operation, or if the name already exists the VM object from \link{gce_get_instance}
 #' 
@@ -180,19 +241,61 @@ gce_vm_create <- function(name,
                           auth_email = "GCE_AUTH_FILE",
                           project = gce_get_global_project(), 
                           zone = gce_get_global_zone(),
-                          dry_run = FALSE) {
+                          dry_run = FALSE,
+                          disk_size_gb = NULL,
+                          use_beta = FALSE,
+                          acceleratorCount = NULL,
+                          acceleratorType = "nvidia-tesla-k80") {
   
-  stopifnot(inherits(name, "character"))
+  assertthat::assert_that(
+    assertthat::is.string(name)
+  )
   
-  url <- sprintf("https://www.googleapis.com/compute/v1/projects/%s/zones/%s/instances", 
-                 project, zone)
+  ## missing only works within function its called from
+  if(missing(predefined_type)){
+    predefined_type <- NULL
+  }
   
-  if(missing(predefined_type) && !is.character(predefined_type)){
+  ## beta elements are NULL
+  guestAccelerators = NULL
+  
+  if(!is.null(acceleratorCount)){
+    acctype <- sprintf("https://www.googleapis.com/compute/beta/projects/%s/zones/%s/acceleratorTypes/%s",
+                       project, zone, acceleratorType)
+    
+    guestAccelerators <- list(
+      list(
+        acceleratorCount = acceleratorCount,
+        acceleratorType = acctype
+      )
+    )
+  }
+
+  
+  if(!use_beta){
+    url <- sprintf("https://www.googleapis.com/compute/v1/projects/%s/zones/%s/instances", 
+                   project, zone)
+    
+
+  } else {
+    warning("This is using the beta version of the Google Compute Engine API and may not work in the future.")
+    url <- sprintf("https://www.googleapis.com/compute/beta/projects/%s/zones/%s/instances", 
+                   project, zone)
+  }
+  
+  
+  if(is.null(predefined_type) && !assertthat::is.string(predefined_type)){
     if(any(is.null(cpus), is.null(memory))){
      stop("Must supply one of 'predefined_type', or both 'cpus' and 'memory' arguments.") 
     }
   }
 
+  ## treat null image_project same as image_project = ""
+  if(is.null(image_project)){
+    image_project <- ""
+  }
+
+  
   ## if an image project is defined, create a source_image_url
   if(nchar(image_project) > 0){
     if(!is.null(disk_source)){
@@ -215,17 +318,21 @@ gce_vm_create <- function(name,
     
   } else {
     source_image_url <- NULL
-    if(!is.null(disk_source)){
+    if(is.null(disk_source)){
       stop("Need to specify either an image_project or a disk_source")
     }
   }
   
   ## make image initialisation
+  initializeParams <- list(
+      sourceImage = source_image_url
+    )
+  if (!is.null(disk_size_gb)) {
+    initializeParams <- as.list(unlist(c(initializeParams, diskSizeGb = disk_size_gb)))
+  }
   init_disk <- list(
     list(
-      initializeParams = list(
-        sourceImage = source_image_url
-      ),
+      initializeParams = initializeParams,
       source = disk_source,
       ## not in docs apart from https://cloud.google.com/compute/docs/instances/create-start-instance
       autoDelete = jsonlite::unbox(TRUE),
@@ -256,7 +363,6 @@ gce_vm_create <- function(name,
       )
     )
   }
-  
 
   ## make instance object
   the_instance <- Instance(canIpForward = canIpForward, 
@@ -268,6 +374,7 @@ gce_vm_create <- function(name,
                            networkInterfaces = networkInterfaces, 
                            scheduling = scheduling, 
                            serviceAccounts = serviceAccounts, 
+                           guestAccelerators = guestAccelerators,
                            tags = tags)
   if(dry_run){
     return(jsonlite::toJSON(the_instance, pretty = TRUE))
@@ -277,7 +384,10 @@ gce_vm_create <- function(name,
   f <- gar_api_generator(url, 
                          "POST", 
                          data_parse_function = function(x) x)
-  stopifnot(inherits(the_instance, "gar_Instance"))
+  
+  assertthat::assert_that(
+    inherits(the_instance, "gar_Instance")
+  )
   
   out <- f(the_body = rmNullObs(the_instance))
   
@@ -405,5 +515,37 @@ gce_vm_stop <- function(instance,
   out <- f()
   
   as.zone_operation(out)
+}
+
+#' Open browser to the serial console output for a VM
+#' 
+#' Saves a few clicks
+#' 
+#' @param instance The VM to see serial console output for
+#' @param open_browser Whether to return a URL or open the browser
+#' @param project Project ID for this request, default as set by \link{gce_get_global_project}
+#' @param zone The name of the zone for this request, default as set by \link{gce_get_global_zone}
+#' 
+#' @return a URL
+#' @export
+gce_vm_logs <- function(instance, 
+                        open_browser = TRUE, 
+                        project = gce_get_global_project(), 
+                        zone = gce_get_global_zone() ){
+  
+  the_name <- as.gce_instance_name(instance)
+  the_url <- sprintf("https://console.cloud.google.com/compute/instancesDetail/zones/%s/instances/%s/console?project=%s",
+                     zone, the_name, project)
+  
+  if(open_browser){
+    if(!is.null(getOption("browser"))){
+      utils::browseURL(the_url)
+    }
+  }
+  
+  myMessage("Serial console output for", the_name ,": ",the_url)
+  
+  the_url
+  
 }
 

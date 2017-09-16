@@ -11,7 +11,8 @@ gce_vm_create(name, predefined_type = "f1-micro",
   metadata = NULL, scheduling = NULL, serviceAccounts = NULL,
   tags = NULL, auth_email = "GCE_AUTH_FILE",
   project = gce_get_global_project(), zone = gce_get_global_zone(),
-  dry_run = FALSE)
+  dry_run = FALSE, disk_size_gb = NULL, use_beta = FALSE,
+  acceleratorCount = NULL, acceleratorType = "nvidia-tesla-k80")
 }
 \arguments{
 \item{name}{The name of the resource, provided by the client when initially creating the resource}
@@ -40,7 +41,7 @@ gce_vm_create(name, predefined_type = "f1-micro",
 
 \item{metadata}{A named list of metadata key/value pairs assigned to this instance}
 
-\item{scheduling}{Scheduling options for this instance}
+\item{scheduling}{Scheduling options for this instance, such as preemptible instances}
 
 \item{serviceAccounts}{A list of service accounts, with their specified scopes, authorized for this instance}
 
@@ -53,6 +54,14 @@ gce_vm_create(name, predefined_type = "f1-micro",
 \item{zone}{The name of the zone for this request}
 
 \item{dry_run}{whether to just create the request JSON}
+
+\item{disk_size_gb}{If not NULL, override default size of the boot disk (size in GB)}
+
+\item{use_beta}{If set to TRUE will use the beta version of the API. Should not be used for production purposes.}
+
+\item{acceleratorCount}{\code{[BETA]} Number of GPUs to add to instance}
+
+\item{acceleratorType}{\code{[BETA]} Name of GPU to add, see \link{gce_list_gpus}}
 }
 \value{
 A zone operation, or if the name already exists the VM object from \link{gce_get_instance}
@@ -87,7 +96,14 @@ To create an instance you need to specify:
  
  If you want to not have an external IP then modify the instance afterwards
 }
+\section{Preemptible VMS}{
+ 
+
+You can set \href{https://cloud.google.com/compute/docs/instances/create-start-preemptible-instance}{preemptible} VMs by passing this in the \code{scheduling} arguments \code{scheduling = list(preemptible = TRUE)}
+ 
+This creates a VM that may be shut down prematurely by Google - you will need to sort out how to save state if that happens in a shutdown script etc.  However, these are much cheaper.
+}
+
 \seealso{
 \href{https://developers.google.com/compute/docs/reference/latest/}{Google Documentation}
 }
-

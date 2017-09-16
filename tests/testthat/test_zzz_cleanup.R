@@ -1,3 +1,4 @@
+
 ## forced to do thsi dependent on another file as need to avoid timeouts
 context("Clean up test VMs")
 
@@ -8,9 +9,11 @@ test_that("We can delete the test VMs",{
   del <- gce_vm_delete("test-vm")
   del2 <- gce_vm_delete("test-container")
   del3 <- gce_vm_delete("rstudio-test")
+  del4 <- gce_vm_delete("test-disk-size")
+  
   expect_equal(del$kind, "compute#operation")
   
-  vm <- gce_check_zone_op(del$name, wait = 10)
+  vm <- gce_wait(del, wait = 10)
   
   expect_equal(vm$kind, "compute#operation")
   expect_equal(vm$status, "DONE")

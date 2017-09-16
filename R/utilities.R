@@ -1,3 +1,34 @@
+# is lowercase or hypens
+is.lower_hypen <- function(x){
+  assertthat::assert_that(
+    assertthat::is.string(x)
+  )
+  
+  grepl("^[a-z\\-]+$", x)
+  
+}
+assertthat::on_failure(is.lower_hypen) <- function(call, env){
+  paste0("Must be lowercase and/or hypens")
+}
+
+
+## from https://github.com/hadley/httr/blob/4624451f8cc395a90730b5a10b50ba005187f2ff/R/oauth-cache.R
+add_line <- function(line, path, quiet = FALSE) {
+  if (file.exists(path)) {
+    lines <- readLines(path, warn = FALSE)
+    lines <- lines[lines != ""]
+  } else {
+    lines <- character()
+  }
+  
+  if (line %in% lines) return(TRUE)
+  if (!quiet) message("Adding ", line, " to ", path)
+  
+  lines <- c(lines, line)
+  writeLines(lines, path)
+  TRUE
+}
+
 extract_ip <- function(ii){
   vapply(ii$items$networkInterfaces, function(x) {
     y <- x$accessConfigs[[1]]$natIP
@@ -24,7 +55,7 @@ indent <- function(str, indent = 0) {
 auth_email <- function(source){
   
   if(Sys.getenv(source) == ""){
-    stop("No email source found")
+    stop("No email found in the authentication file at Sys.getenv(", source, "). \nSet argument auth_email to the environment file containing your service account authentication JSON file e.g. 'GCE_AUTH_FILE', or supply the authentication email directly. e.g. 'example@blah.com'")
   }
   
   if(!grepl("@", source)){
@@ -101,7 +132,7 @@ idempotency <- function(){
 }
 
 
-#' Customer message log level
+#' Custom message log level
 #' 
 #' @param ... The message(s)
 #' @param level The severity
@@ -113,7 +144,7 @@ myMessage <- function(..., level = 2){
   compare_level <- getOption("googleAuthR.verbose")
   
   if(level >= compare_level){
-    message(...)
+    message(Sys.time() ,"> ", ...)
   }
   
 }

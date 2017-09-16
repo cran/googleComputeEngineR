@@ -1,3 +1,5 @@
+
+
 context("Make a VM")
 
 test_that("We can make a container VM",{
@@ -6,8 +8,7 @@ test_that("We can make a container VM",{
                 file = system.file("cloudconfig", 
                                    "shiny.yaml", 
                                    package = "googleComputeEngineR"),
-                predefined_type = "f1-micro",
-                auth_email = "TRAVIS_GCE_AUTH_FILE")
+                predefined_type = "f1-micro")
   
   expect_equal(ins$kind, "compute#instance")
   expect_equal(ins$status, "RUNNING")
@@ -22,8 +23,7 @@ test_that("We can make a VM with metadata", {
   
   ins <- gce_vm("test-vm", 
                 predefined_type = "f1-micro",
-                metadata = list(test_date = today),
-                auth_email = "TRAVIS_GCE_AUTH_FILE")
+                metadata = list(test_date = today))
 
   expect_equal(ins$kind, "compute#instance")
   expect_equal(ins$status, "RUNNING")
@@ -42,8 +42,7 @@ test_that("We can make a template VM", {
                template = "rstudio", 
                predefined_type = "f1-micro", 
                username = "mark", 
-               password = "mark1234",
-               auth_email = "TRAVIS_GCE_AUTH_FILE")
+               password = "mark1234")
   
   expect_equal(vm$kind, "compute#instance")
   
@@ -53,6 +52,39 @@ test_that("We can make a template VM", {
   
 })
 
+test_that("We can make a VM with custom disk size", {
+  skip_on_cran()
+  ins <- gce_vm("test-disk-size",
+                file = system.file("cloudconfig", 
+                                   "shiny.yaml", 
+                                   package = "googleComputeEngineR"),
+                predefined_type = "f1-micro",
+                disk_size_gb = 12
+                )
+  
+  expect_equal(ins$kind, "compute#instance")
+  expect_equal(ins$status, "RUNNING")
+  boot_disk <- gce_get_disk('test-disk-size')
+  expect_equal(boot_disk$sizeGb, '12')
+})
+
+# test_that("We can make a shiny app instance", {
+#   skip_on_cran()
+#   vm <- gce_vm("shiny-test",
+#                template = "shiny",
+#                predefined_type = "n1-standard-1")
+#   expect_equal(vm$kind, "compute#instance")
+#   expect_equal(gce_get_metadata(vm, "template")$value, "shiny")
+# 
+#   app_dir <- system.file("dockerfiles","shiny-googleAuthRdemo", 
+#                          package = "googleComputeEngineR")
+# 
+#   vm <- gce_ssh_setup(vm)
+#   job <- gce_shiny_addapp(vm, shinyapp = app_dir)
+# 
+# })
+
+
 context("SSH tests")
 
 test_that("We can run SSH on an instance", {
@@ -61,10 +93,7 @@ test_that("We can run SSH on an instance", {
   
   vm <- gce_get_instance("test-vm")
   
-  cmd <- gce_ssh(vm, "echo foo",
-                 username = "travis",
-                 key.pub = "travis-ssh-key.pub",
-                 key.private = "travis-ssh-key")
+  cmd <- gce_ssh(vm, "echo foo")
   
   expect_true(cmd, "SSH connected")
   
@@ -75,12 +104,8 @@ test_that("We can check SSH settings", {
   # skip_on_travis()
   
   vm <- gce_get_instance("test-vm")
-  
-  test_user <- "travis"
-  cmd <- gce_ssh(vm, "echo foo",
-                 username = test_user,
-                 key.pub = "travis-ssh-key.pub",
-                 key.private = "travis-ssh-key")
+
+  cmd <- gce_ssh(vm, "echo foo")
   
   expect_true(cmd, "SSH connected")
   
@@ -97,10 +122,7 @@ test_that("We can upload via SSH", {
   
   cmd <- gce_ssh_upload(vm, 
                         local = "test_aa_auth.R",
-                        remote = "test_auth_up.R",
-                        username = "travis",
-                        key.pub = "travis-ssh-key.pub",
-                        key.private = "travis-ssh-key")
+                        remote = "test_auth_up.R")
   
   expect_true(cmd, "SSH upload")
   
@@ -114,10 +136,7 @@ test_that("We can download via SSH", {
   
   cmd <- gce_ssh_download(vm, 
                           remote = "test_auth_up.R",
-                          local = "test_auth_down.R",
-                          username = "travis",
-                          key.pub = "travis-ssh-key.pub",
-                          key.private = "travis-ssh-key") 
+                          local = "test_auth_down.R") 
 
   expect_true(cmd, "SSH download")
   unlink("test_auth_down.R")
@@ -131,9 +150,7 @@ test_that("We can set metadata on a VM", {
   
   job <- gce_set_metadata(list(test = "blah"), instance = "rstudio-test")
   
-  print(job)
-  
-  gce_check_zone_op(job$name)
+  gce_wait(job)
   
   vm <- gce_get_instance("rstudio-test")
   

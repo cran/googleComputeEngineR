@@ -4,7 +4,7 @@ ssh_options <- function(instance) {
   opts <- c(
     BatchMode = "yes",
     StrictHostKeyChecking = "no",
-    UserKnownHostsFile = file.path(tempdir(), "hosts")
+    UserKnownHostsFile = paste0("'",file.path(tempdir(), "hosts"),"'")
   )
   
   if(exists("ssh", instance)){
@@ -13,9 +13,9 @@ ssh_options <- function(instance) {
 
   if(!file.exists(private_key)) stop("Couldn't find private key")
   
-  paste0(paste0("-o ", names(opts), "=", opts, collapse = " "), 
-         " -i ", 
-         private_key)
+  c(paste0("-o ", names(opts), "=", opts, collapse = " "), 
+    " -i ", 
+    paste0("'",private_key,"'"))
 }
 
 #' Add SSH details to a gce_instance
@@ -38,6 +38,42 @@ ssh_options <- function(instance) {
 #'   \code{file.path(Sys.getenv("HOME"), ".ssh", "google_compute_engine.pub")}
 #'   
 #' @return The instance with SSH details included in $ssh
+#' 
+#' @examples 
+#' 
+#' \dontrun{
+#'   
+#'   library(googleComputeEngineR)
+#'   
+#'   vm <- gce_vm("my-instance")
+#'   
+#'   ## if you have already logged in via gcloud, the default keys will be used
+#'   ## no need to run gce_ssh_addkeys
+#'   ## run command on instance            
+#'   gce_ssh(vm, "echo foo")
+#'   
+#'   
+#'   ## if running on Windows, use the RStudio default SSH client
+#'   ## e.g. add C:\Program Files\RStudio\bin\msys-ssh-1000-18 to your PATH
+#'   ## then run: 
+#'   vm2 <- gce_vm("my-instance2")
+#' 
+#'   ## add SSH info to the VM object
+#'   ## custom info
+#'   vm <- gce_ssh_setup(vm,
+#'                       username = "mark", 
+#'                       key.pub = "C://.ssh/id_rsa.pub",
+#'                       key.private = "C://.ssh/id_rsa")
+#'                       
+#'   ## run command on instance            
+#'   gce_ssh(vm, "echo foo")
+#'   #> foo
+#' 
+#'   ## example to check logs of rstudio docker container
+#'   gce_ssh(vm, "sudo journalctl -u rstudio")
+#' 
+#' }
+#' @family ssh functions
 #' @export
 gce_ssh_addkeys <- function(instance,
                             key.pub = NULL,
@@ -49,7 +85,7 @@ gce_ssh_addkeys <- function(instance,
   
   if(exists("ssh", instance)){
     if(!overwrite){
-      myMessage("SSH keys already set", level = 2)
+      myMessage("SSH keys already set", level = 1)
       return(instance)
     } else {
       myMessage("Overwriting SSH keys data on local instance object", level = 3)
@@ -81,7 +117,7 @@ gce_ssh_addkeys <- function(instance,
       
       myMessage("Using existing public key in ", 
                 g_public, 
-                level = 2)
+                level = 1)
       
       key.private <- g_private
       key.pub.content <- readChar(g_public, 10000)
@@ -109,25 +145,59 @@ gce_ssh_addkeys <- function(instance,
 #' 
 #' @details 
 #' 
-#' This loads a public ssh-key to an instance's metadata.  It does not use the project SSH-Keys, that may be set seperatly.
+#' This loads a public ssh-key to an instance's metadata.  It does not use the project SSH-Keys, that may be set separately.
 #' 
 #' You will need to generate a new SSH key-pair if you have not connected to an instance before. 
 #' 
 #' Instructions for this can be found here: \url{https://cloud.google.com/compute/docs/instances/connecting-to-instance}.  Once you have generated run this function once to initiate setup.
 #' 
-#' If you have historically connected via gcloud or some other means, ssh keys may have been generated automatically.  These will be looked for and used if found, at \code{file.path(Sys.getenv("HOME"), ".ssh", "google_compute_engine.pub")}
+#' If you have historically connected via gcloud or some other means, ssh keys may have been generated automatically.  
+#' 
+#' These will be looked for and used if found, at \code{file.path(Sys.getenv("HOME"), ".ssh", "google_compute_engine.pub")}
 #' 
 #' @param username The username you used to generate the key-pair
-#' @param key.pub The filepath location of the public key, only needed first call per session
-#' @param key.private The filepath location of the private key, only needed first call per session
+#' @param key.pub The filepath location of the public key
+#' @param key.private The filepath location of the private key
 #' @param instance Name of the instance of run ssh command upon
 #' @param ssh_overwrite Will check if SSH settings already set and overwrite them if TRUE
 #' 
 #' @seealso \url{https://cloud.google.com/compute/docs/instances/adding-removing-ssh-keys}
 #' 
 #' @return TRUE if successful
+#' @examples 
 #' 
+#' \dontrun{
+#'   
+#'   library(googleComputeEngineR)
+#'   
+#'   vm <- gce_vm("my-instance")
+#'   
+#'   ## if you have already logged in via gcloud, the default keys will be used
+#'   ## no need to run gce_ssh_addkeys
+#'   ## run command on instance            
+#'   gce_ssh(vm, "echo foo")
+#'   
+#'   
+#'   ## if running on Windows, use the RStudio default SSH client
+#'   ## e.g. add C:\Program Files\RStudio\bin\msys-ssh-1000-18 to your PATH
+#'   ## then run: 
+#'   vm2 <- gce_vm("my-instance2")
 #' 
+#'   ## add SSH info to the VM object
+#'   ## custom info
+#'   vm <- gce_ssh_setup(vm,
+#'                       username = "mark", 
+#'                       key.pub = "C://.ssh/id_rsa.pub",
+#'                       key.private = "C://.ssh/id_rsa")
+#'                       
+#'   ## run command on instance            
+#'   gce_ssh(vm, "echo foo")
+#'   #> foo
+#' 
+#'   ## example to check logs of rstudio docker container
+#'   gce_ssh(vm, "sudo journalctl -u rstudio")
+#' 
+#' }
 #' @export
 #' @family ssh functions
 gce_ssh_setup <- function(instance,
@@ -151,7 +221,7 @@ gce_ssh_setup <- function(instance,
   cloud_keys <- gce_check_ssh(instance)
   
   if(ins$ssh$username %in% cloud_keys$username){
-    myMessage("Username SSH key already exists", level = 2)
+    myMessage("Username SSH key already exists", level = 1)
   } else {
     ## make SSH Key metadata for upload to instance.
     new_key <- paste0(ins$ssh$username, ":", ins$ssh$key.pub, collapse = "")
@@ -165,7 +235,7 @@ gce_ssh_setup <- function(instance,
                             instance = ins, 
                             project = project, 
                             zone = zone)
-    gce_check_zone_op(job$name, verbose = FALSE) 
+    gce_wait(job, verbose = FALSE) 
     myMessage("Public SSH key uploaded to instance", level = 3)
   }
   
@@ -195,8 +265,8 @@ gce_check_ssh <- function(instance){
   
   myMessage("Current local settings: ", instance$ssh$username, ", 
             private key: ", instance$ssh$key.private, ",
-            public key: ", instance$ssh$key.pub, level = 2)
-  myMessage("Returning SSH keys on instance: ", level = 2)
+            public key: ", instance$ssh$key.pub, level = 1)
+  myMessage("Returning SSH keys on instance", level = 2)
   
   out
 }
@@ -245,10 +315,15 @@ is_port_open <- function(host, port=22, timeout=1) {
 #' See if ssh or scp is installed
 #' From https://github.com/sckott/analogsea/blob/master/R/zzz.R
 #' @keywords internal
-cli_tools <- function(ip){
+cli_tools <- function(){
   tmp <- Sys.which(c("ssh","scp"))
   if (any(tmp == "")) {
     nf <- paste0(names(tmp)[tmp == ""], collapse = ", ")
-    stop(sprintf("\n%s not found on your computer\nInstall the missing tool(s) and try again", nf))
+    if(.Platform$OS.type == "windows"){
+      stop(sprintf("\n%s not found on your computer\nInstall the missing tool(s) and try again. See ?gce_ssh for workarounds, including using the RStudio native SSH client.", nf))
+    } else {
+      stop(sprintf("\n%s not found on your computer\nInstall the missing tool(s) and try again", nf))
+    }
+
   }
 }

@@ -9,8 +9,6 @@ vignette: >
   %\VignetteEncoding{UTF-8}
 ---
 
-> See all documentation on the [googleComputeEngineR website](https://cloudyr.github.io/googleComputeEngineR/)
-
 ## Launch a Virtual Machine
 
 To launch a VM, use `gce_vm()`. This will:
@@ -205,6 +203,13 @@ gce_make_disk("my-disk")
 ```
 
 By default it will be a 500GB disk unless you specify otherwise. You can then attach this disk to the instance upon creation using the `disk_source` argument set to the disk resource URL.
+
+From version `0.1.0.9000` onwards you can also specify the size of the disk when creating a VM (Thanks to @jburos)
+
+```r
+build_vm <- gce_vm_create('my-build-image3', disk_size_gb = 20)
+
+```
 
 #### Metadata
 

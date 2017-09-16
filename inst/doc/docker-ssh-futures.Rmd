@@ -9,8 +9,6 @@ vignette: >
   %\VignetteEncoding{UTF-8}
 ---
 
-> See all documentation on the [googleComputeEngineR website](https://cloudyr.github.io/googleComputeEngineR/)
-
 ## Logging in to your instance
 
 Google Cloud comes with a browser based SSH application, which you can launch via `gce_ssh_browser` to set it up further to your liking.
@@ -20,15 +18,40 @@ library(googleComputeEngineR)
 gce_ssh_browser("my-server")
 ```
 
-![](http://g.recordit.co/TpM4IfRLgf.gif)
+
+![](ssh-login.gif)
 
 ## SSH commands
 
+SSH is useful for many applications, but is also currently used by the `docker_x` commands to manipulate docker images on the VM - this may change in future versions, but currently, without SSH authentication, you won't be able to use Docker commands from your local session. 
+
+### Mac/Unix
+
 You can also send ssh commands to your running instance from R via the `gce_ssh()` commands.
 
-For this you will need to either connect first via the `gcloud compute ssh` command that generates SSH-keys, or generate them yourself following this [Google guide](https://cloud.google.com/compute/docs/instances/connecting-to-instance).
+#### gcloud default keys
 
-Once you have generated for your username, the public and private key, you can connect via:
+For this you will need to connect once via the Google Cloud SDK `gcloud compute ssh` , or copy the default keys.
+
+After that step, you will then in future be able to connect via:
+
+```r
+library(googleComputeEngineR)
+
+vm <- gce_vm("my-instance")
+  
+## run command on instance            
+gce_ssh(vm, "echo foo")
+# foo
+```
+
+Calling `gce_ssh` directly will call `gce_ssh_setup` with defaults set if it has not been run already.  It will look for a username via `Sys.info()[["user"]]`.
+
+#### Custom SSH keys
+
+If you want more customisation over the SSH connection, then you will need to generate SSH crudentials yourself following this [Google guide](https://cloud.google.com/compute/docs/instances/connecting-to-instance).
+
+Once you have generated details for your username, the public and private key, you can connect via:
 
 ```r
 library(googleComputeEngineR)
@@ -36,17 +59,43 @@ library(googleComputeEngineR)
 vm <- gce_vm("my-instance")
 
 ## add SSH info to the VM object
-vm <- gce_ssh_addkeys(username = "mark", 
-                      instance = "your-instance", 
-                      key.pub = "filepath.to.public.key",
-                      key.private = "filepath.to.private.key")
-  
+vm <- gce_ssh_setup(vm,
+                    username = "mark", 
+                    key.pub = "filepath.to.public.key",
+                    key.private = "filepath.to.private.key")
 ## run command on instance            
 gce_ssh(vm, "echo foo")
 # foo
-```
+```                      
 
-You can also call `gce_ssh` directly which will call `gce_ssh_addkeys` if it has not been run already.  It will look for a username via `Sys.info()[["user"]]` or you will need to specify it in the first call you make.
+You may also need to specify the username if its not `SSH` safe - for instance uppercase or with symbols. The VM will generate a user account the same name as the one you log in with. 
+
+### Windows
+
+Windows does not come with an SSH client installed, so it is recommended that you use the SSH client bundled with RStudio instead.  
+
+> We assume you already use RStudio, if you don't want to use it or can't then you will need to download an alterantive SSH client that will respond on the command line to `ssh`.  RStudio uses [MSYS](http://www.mingw.org/wiki/msys) you may want to try. 
+
+Add the RStudio SSH client to your PATH variable, e.g. `C:\Program Files\RStudio\bin\msys-ssh-1000-18`
+
+If you look in RStudio you can view the location of its stored SSH keys (`Options > git/SVN`).  These are the keys that we will add to the SSH information for the instance.  By default they are `C://.ssh/id_rsa.pub` and `C://.ssh/id_rsa` 
+
+Create your VM as normal, and add the custom SHH information:
+
+```r
+library(googleComputeEngineR)
+
+## create a default RStudio VM
+vm <- gce_vm("my-instance")
+
+## add custom SSH keys to the VM object with assumed RStudio defaults
+vm <- gce_ssh_setup(vm 
+                    key.pub = "C://.ssh/id_rsa.pub",
+                    key.private = "C://.ssh/id_rsa")
+                      
+## test ssh
+gce_ssh(vm, "echo foo")
+```
 
 ## Docker commands
 
@@ -189,35 +238,6 @@ container_update_info(con$rstudio)
   1 rstudio-dev-boot-disk PERSISTENT READ_WRITE TRUE       TRUE
 ```
 
-## Using private Google Containers
-
-Google Cloud comes with a [private container registry](https://cloud.google.com/container-registry/) that is available to all VMs created in the that project, where you can store docker containers.
-
-You can use this to save the state of the container VMs so you can redeploy them to other instances quickly, without needing to set them up again with packages or code.
-
-Make your changes to the instance by logging in to the RStudio server at the IP provided, then this command will save  it to the local registry under the name you specify.  
-
-This can take some time (5mins +) if its a new container. You should be able to see the image in the web UI when it is done at `https://console.cloud.google.com/kubernetes/images/list`.
- 
-```r
-gce_save_container(vm, "my-rstudio")
-```
-
-The container `my-rstudio` with your changes is now saved, and can be used to launch new containers.
-
-To load onto another VM, use a Google container optimised instance with `image_project = "google-containers"`:
-
-```r
-vm2 <-  gce_vm(name = "new_instance",
-               predefined_type = "f1-micro",
-               image_family = "gci-stable",
-               image_project = "google-containers")
-
-## load and run the container from previous setup
-gce_load_container(vm2, "my-rstudio")
-
-```
-
 ## Futures
 
 You can run R functions asynchronously over a cluster of Google VMs using the R package [`future`](https://CRAN.R-project.org/package=future).
@@ -233,8 +253,7 @@ vm2 <- gce_vm("cluster2", template = "r-base")
 vm3 <- gce_vm("cluster2", template = "r-base")
 
 vms <- list(vm1, vm2, vm3)
-cl <- lapply(vms, FUN = as.cluster)
-plan(cluster, workers = cl)
+plan(cluster, workers = vms)
 
 ## use futures %<-% to send a function to the cluster
 si %<-% Sys.info()

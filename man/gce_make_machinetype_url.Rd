@@ -4,8 +4,8 @@
 \alias{gce_make_machinetype_url}
 \title{Construct a machineType URL}
 \usage{
-gce_make_machinetype_url(predefined_type, cpus, memory,
-  zone = gce_get_global_zone())
+gce_make_machinetype_url(predefined_type = NULL, cpus = NULL,
+  memory = NULL, zone = gce_get_global_zone())
 }
 \arguments{
 \item{predefined_type}{A predefined machine type from \link{gce_list_machinetype}}
@@ -26,4 +26,3 @@ Construct a machineType URL
 \code{cpus} must be in multiples of 2 up to 32
 \code{memory} must be in multiples of 256
 }
-

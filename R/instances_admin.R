@@ -44,12 +44,20 @@ gce_list_instances <- function(filter = NULL,
                                pageToken = NULL,
                                project = gce_get_global_project(), 
                                zone = gce_get_global_zone()) {
+
   url <- sprintf("https://www.googleapis.com/compute/v1/projects/%s/zones/%s/instances", 
                  project, zone)
+  
+  if(!is.null(filter)){
+    filter <- utils::URLencode(filter, reserved = TRUE)
+  }
+  
   pars <- list(filter = filter, 
                maxResults = maxResults, 
                pageToken = pageToken)
   pars <- rmNullObs(pars)
+  
+
   # compute.instances.list
   f <- gar_api_generator(url, 
                          "GET", 
@@ -176,7 +184,7 @@ as.gce_instance_name_one <- function(x){
 #' @param metadata A named list of metadata key/value pairs assigned to this instance
 #' @param name The name of the resource, provided by the client when initially creating the resource
 #' @param networkInterfaces An array of configurations for this interface
-#' @param scheduling Scheduling options for this instance
+#' @param scheduling Scheduling options for this instance, such as preemptible instances
 #' @param serviceAccounts A list of service accounts, with their specified scopes, authorized for this instance
 #' @param tags A list of tags to apply to this instance
 #' 
@@ -193,7 +201,8 @@ Instance <- function(name = NULL,
                      networkInterfaces = NULL, 
                      scheduling = NULL, 
                      serviceAccounts = NULL, 
-                     tags = NULL) {
+                     tags = NULL,
+                     guestAccelerators = NULL) {
   
   structure(list(canIpForward = canIpForward,
                  description = description, 
@@ -204,6 +213,7 @@ Instance <- function(name = NULL,
                  networkInterfaces = networkInterfaces, 
                  scheduling = scheduling, 
                  serviceAccounts = serviceAccounts, 
+                 guestAccelerators = guestAccelerators,
                  tags = tags), 
             class = c("gar_Instance", "list"))
 }

@@ -22,10 +22,11 @@ write_files:
                                   -e "ROOT=TRUE" \
                                   -e "R_LIBS_USER=/library/" \
                                   -e USER=%s -e PASSWORD=%s \
-                                  -v /home/gcer/library/:/library/ \
+                                  -v /home/gcer:/home/%s \
                                   --name=rstudio \
                                   %s
     ExecStop=/usr/bin/docker stop rstudio
+    ExecStopPost=/usr/bin/docker rm rstudio
 
 runcmd:
 - systemctl daemon-reload
