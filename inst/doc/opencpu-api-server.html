@@ -12,7 +12,7 @@
 
 <meta name="author" content="Mark Edmondson" />
 
-<meta name="date" content="2017-09-16" />
+<meta name="date" content="2019-05-04" />
 
 <title>OpenCPU Server</title>
 
@@ -70,7 +70,7 @@ code > span.in { color: #60a0b0; font-weight: bold; font-style: italic; } /* Inf
 
 <h1 class="title toc-ignore">OpenCPU Server</h1>
 <h4 class="author"><em>Mark Edmondson</em></h4>
-<h4 class="date"><em>2017-09-16</em></h4>
+<h4 class="date"><em>2019-05-04</em></h4>
 
 
 
@@ -97,19 +97,19 @@ vm &lt;-<span class="st"> </span><span class="kw">gce_vm</span>(<span class="dt"
 <div id="build-a-new-opencpu-image" class="section level3">
 <h3>Build a new OpenCPU image</h3>
 <p>This Dockerfile is available via <code>get_dockerfolder(&quot;opencpu-installgithub&quot;)</code> and below. It installs an OpenCPU package from my <a href="code.markedmondson.me/predictClickOpenCPU/supercharge.html#1">prediction of user URLs for prefetching</a> application.</p>
-<div class="sourceCode"><pre class="sourceCode sh"><code class="sourceCode bash"><span class="kw">FROM</span> opencpu/base
-<span class="kw">MAINTAINER</span> Mark Edmondson (r@sunholo.com)
+<div class="sourceCode"><pre class="sourceCode sh"><code class="sourceCode bash"><span class="ex">FROM</span> opencpu/base
+<span class="ex">MAINTAINER</span> Mark Edmondson (r@sunholo.com)
 
 <span class="co"># install any package dependencies</span>
-<span class="kw">RUN</span> apt-get update <span class="kw">&amp;&amp;</span> <span class="kw">apt-get</span> install -y \
+<span class="ex">RUN</span> apt-get update <span class="kw">&amp;&amp;</span> <span class="ex">apt-get</span> install -y \
     nano \
-    <span class="co">## clean up</span>
-    <span class="kw">&amp;&amp;</span> <span class="kw">apt-get</span> clean <span class="dt">\ </span>
-    <span class="kw">&amp;&amp;</span> <span class="kw">rm</span> -rf /var/lib/apt/lists/ <span class="dt">\ </span>
-    <span class="kw">&amp;&amp;</span> <span class="kw">rm</span> -rf /tmp/downloaded_packages/ /tmp/*.rds
+    ## clean up
+    <span class="kw">&amp;&amp;</span> <span class="ex">apt-get</span> clean <span class="dt">\ </span>
+    <span class="kw">&amp;&amp;</span> <span class="fu">rm</span> -rf /var/lib/apt/lists/ <span class="dt">\ </span>
+    <span class="kw">&amp;&amp;</span> <span class="fu">rm</span> -rf /tmp/downloaded_packages/ /tmp/*.rds
     
 <span class="co">## Install your custom package from Github</span>
-<span class="kw">RUN</span> Rscript -e <span class="st">&quot;devtools::install_github(c('MarkEdmondson1234/predictClickOpenCPU'))&quot;</span></code></pre></div>
+<span class="ex">RUN</span> Rscript -e <span class="st">&quot;devtools::install_github(c('MarkEdmondson1234/predictClickOpenCPU'))&quot;</span></code></pre></div>
 <p>The Dockerfile is used to build the custom image below:</p>
 <div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r">## build a docker image with your package installed
 <span class="kw">docker_build</span>(vm, 

@@ -1,3 +1,21 @@
+#' Check if instance exists already, if it does return it
+#' @noRd
+check_vm_exists <- function(name, project, zone){
+  
+  stopped <- gce_list_instances("status eq TERMINATED", project = project, zone = zone)
+  
+  if(name %in% stopped$items$name){
+    myMessage("VM previously created but not running, starting VM", level = 3)
+    job <- gce_vm_start(name, project = project, zone = zone)
+    gce_wait(job)
+    return(gce_get_instance(name, project, zone))
+  }
+  
+  NULL
+
+}
+
+
 #' Extract zone and project from an instance object
 #' 
 #' @param instance The instance
@@ -113,7 +131,7 @@ gce_get_instance <- function(instance,
 
 #' Get the instance name(s) if passed instance(s)
 #' @param A list or a single instance 
-#' 
+#' @noRd
 #' @keywords internal
 as.gce_instance_name <- function(x){
   
@@ -129,7 +147,7 @@ as.gce_instance_name <- function(x){
 #' @param x A character name of instance or instance object
 #' @param project GDE project
 #' @param zone GCE zone
-#' 
+#' @noRd
 #' @keywords internal
 as.gce_instance <- function(x, 
                             project = gce_get_global_project(), 
@@ -142,12 +160,14 @@ as.gce_instance <- function(x,
   } else {
     stop("Unrecognised instance class - ", class(x))
   }
+  
+  ins
 }
 
 #' Check if is gce_instance
 #' @param x The object to test if class \code{gce_instance}
 #' @return TRUE or FALSE
-#' @export
+#' @noRd
 is.gce_instance <- function(x){
   inherits(x, "gce_instance")
 }
@@ -155,7 +175,7 @@ is.gce_instance <- function(x){
 
 #' Get the instance name if passed an instance
 #' @param a character name or gce_instance object
-#' 
+#' @noRd
 #' @keywords internal
 as.gce_instance_name_one <- function(x){
   if(is.gce_instance(x)){
@@ -202,6 +222,7 @@ Instance <- function(name = NULL,
                      scheduling = NULL, 
                      serviceAccounts = NULL, 
                      tags = NULL,
+                     minCpuPlatform = NULL,
                      guestAccelerators = NULL) {
   
   structure(list(canIpForward = canIpForward,
@@ -210,6 +231,7 @@ Instance <- function(name = NULL,
                  metadata = Metadata(metadata), 
                  name = name, 
                  disks = disks,
+                 minCpuPlatform = minCpuPlatform,
                  networkInterfaces = networkInterfaces, 
                  scheduling = scheduling, 
                  serviceAccounts = serviceAccounts, 

@@ -54,7 +54,7 @@ gce_push_registry <- function(instance,
   gce_ssh(instance, "/usr/share/google/dockercfg_update.sh")
   
   myMessage("Uploading to Google Container Registry: ", 
-            paste0("https://console.cloud.google.com/kubernetes/images/list?project=",project), level = 3)
+            paste0("https://console.cloud.google.com/gcr/images/list?project=",project), level = 3)
   
   docker_cmd(instance, cmd = "push", args = build_tag, wait = wait)
   
@@ -74,8 +74,7 @@ gce_push_registry <- function(instance,
 #' @family container registry functions
 gce_tag_container <- function(container_name,
                               project = gce_get_global_project(),
-                              container_url = "gcr.io"
-){
+                              container_url = "gcr.io"){
   
   paste0(container_url, "/", project, "/", container_name)
   

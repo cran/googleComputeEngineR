@@ -12,7 +12,7 @@
 
 <meta name="author" content="Mark Edmondson" />
 
-<meta name="date" content="2017-09-16" />
+<meta name="date" content="2019-05-04" />
 
 <title>Shiny App</title>
 
@@ -70,7 +70,7 @@ code > span.in { color: #60a0b0; font-weight: bold; font-style: italic; } /* Inf
 
 <h1 class="title toc-ignore">Shiny App</h1>
 <h4 class="author"><em>Mark Edmondson</em></h4>
-<h4 class="date"><em>2017-09-16</em></h4>
+<h4 class="date"><em>2019-05-04</em></h4>
 
 
 
@@ -95,27 +95,27 @@ code > span.in { color: #60a0b0; font-weight: bold; font-style: italic; } /* Inf
 <h2>Create a Dockerfile in build folder, including copying the Shiny app into the Docker image</h2>
 <p>The <code>Dockerfile</code> includes a <code>COPY</code> command to copy necessary Shiny files such as <code>ui.R</code> and <code>server.R</code> into the Docker image.</p>
 <p>The Shiny app example below is the <a href="https://mark.shinyapps.io/googleAuthRexample/"><code>googleAuthR</code> demo app</a>, and the build directory can be found via: <code>get_dockerfolder(&quot;shiny-googleAuthRdemo&quot;)</code></p>
-<div class="sourceCode"><pre class="sourceCode sh"><code class="sourceCode bash"><span class="kw">FROM</span> rocker/shiny
-<span class="kw">MAINTAINER</span> Mark Edmondson (r@sunholo.com)
+<div class="sourceCode"><pre class="sourceCode sh"><code class="sourceCode bash"><span class="ex">FROM</span> rocker/shiny
+<span class="ex">MAINTAINER</span> Mark Edmondson (r@sunholo.com)
 
 <span class="co"># install R package dependencies</span>
-<span class="kw">RUN</span> apt-get update <span class="kw">&amp;&amp;</span> <span class="kw">apt-get</span> install -y \
+<span class="ex">RUN</span> apt-get update <span class="kw">&amp;&amp;</span> <span class="ex">apt-get</span> install -y \
     libssl-dev \
-    <span class="co">## clean up</span>
-    <span class="kw">&amp;&amp;</span> <span class="kw">apt-get</span> clean <span class="dt">\ </span>
-    <span class="kw">&amp;&amp;</span> <span class="kw">rm</span> -rf /var/lib/apt/lists/ <span class="dt">\ </span>
-    <span class="kw">&amp;&amp;</span> <span class="kw">rm</span> -rf /tmp/downloaded_packages/ /tmp/*.rds
+    ## clean up
+    <span class="kw">&amp;&amp;</span> <span class="ex">apt-get</span> clean <span class="dt">\ </span>
+    <span class="kw">&amp;&amp;</span> <span class="fu">rm</span> -rf /var/lib/apt/lists/ <span class="dt">\ </span>
+    <span class="kw">&amp;&amp;</span> <span class="fu">rm</span> -rf /tmp/downloaded_packages/ /tmp/*.rds
     
 <span class="co">## Install packages from CRAN</span>
-<span class="kw">RUN</span> install2.r --error <span class="dt">\ </span>
-    <span class="kw">-r</span> <span class="st">'http://cran.rstudio.com'</span> \
+<span class="ex">RUN</span> install2.r --error <span class="dt">\ </span>
+    <span class="ex">-r</span> <span class="st">'http://cran.rstudio.com'</span> \
     googleAuthR \
-    <span class="kw">&amp;&amp;</span> <span class="kw">Rscript</span> -e <span class="st">&quot;devtools::install_github(c('MarkEdmondson1234/googleID')&quot;</span> \
-    <span class="co">## clean up</span>
-    <span class="kw">&amp;&amp;</span> <span class="kw">rm</span> -rf /tmp/downloaded_packages/ /tmp/*.rds
+    <span class="kw">&amp;&amp;</span> <span class="ex">Rscript</span> -e <span class="st">&quot;devtools::install_github(c('MarkEdmondson1234/googleID')&quot;</span> \
+    ## clean up
+    <span class="kw">&amp;&amp;</span> <span class="fu">rm</span> -rf /tmp/downloaded_packages/ /tmp/*.rds
 
 <span class="co">## assume shiny app is in build folder /shiny</span>
-<span class="kw">COPY</span> ./shiny/ /srv/shiny-server/myapp/</code></pre></div>
+<span class="ex">COPY</span> ./shiny/ /srv/shiny-server/myapp/</code></pre></div>
 <p>The <code>COPY</code> command copies from a folder in the same location as the <code>Dockerfile</code>, and then places it within the <code>/srv/shiny-server/</code> folder which is the default location for Shiny apps. This location means that the Shiny app will be avialable at <code>xxx.xxx.xxx.xxx/myapp/</code></p>
 <p>The example Dockerfile above installs <code>googleAuthR</code> from CRAN, <code>googleID</code> from GitHub and a Debian dependency for <code>googleAuthR</code> that is needed, <code>libssl-dev</code> via <code>apt-get</code>. Modify this for your own needs.</p>
 <div id="public-docker-images" class="section level3">
@@ -125,27 +125,27 @@ code > span.in { color: #60a0b0; font-weight: bold; font-style: italic; } /* Inf
 <div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r"><span class="kw">library</span>(googleComputeEngineR)
 <span class="kw">gce_tag_container</span>(<span class="st">&quot;shiny-googleauthrdemo&quot;</span>, <span class="dt">project =</span> <span class="st">&quot;gcer-public&quot;</span>)</code></pre></div>
 <p>This can then be added to your Dockerfile:</p>
-<div class="sourceCode"><pre class="sourceCode sh"><code class="sourceCode bash"><span class="kw">FROM</span> gcr.io/gcer-public/shiny-googleauthrdemo
-<span class="kw">MAINTAINER</span> Mark Edmondson (r@sunholo.com)
+<div class="sourceCode"><pre class="sourceCode sh"><code class="sourceCode bash"><span class="ex">FROM</span> gcr.io/gcer-public/shiny-googleauthrdemo
+<span class="ex">MAINTAINER</span> Mark Edmondson (r@sunholo.com)
 
 <span class="co"># install R package dependencies</span>
-<span class="kw">RUN</span> apt-get update <span class="kw">&amp;&amp;</span> <span class="kw">apt-get</span> install -y \
-    <span class="co">##### ADD YOUR DEPENDENCIES</span>
+<span class="ex">RUN</span> apt-get update <span class="kw">&amp;&amp;</span> <span class="ex">apt-get</span> install -y \
+    ##### ADD YOUR DEPENDENCIES
     <span class="co">## clean up</span>
-    <span class="kw">&amp;&amp;</span> <span class="kw">apt-get</span> clean <span class="dt">\ </span>
-    <span class="kw">&amp;&amp;</span> <span class="kw">rm</span> -rf /var/lib/apt/lists/ <span class="dt">\ </span>
-    <span class="kw">&amp;&amp;</span> <span class="kw">rm</span> -rf /tmp/downloaded_packages/ /tmp/*.rds
+    <span class="kw">&amp;&amp;</span> <span class="ex">apt-get</span> clean <span class="dt">\ </span>
+    <span class="kw">&amp;&amp;</span> <span class="fu">rm</span> -rf /var/lib/apt/lists/ <span class="dt">\ </span>
+    <span class="kw">&amp;&amp;</span> <span class="fu">rm</span> -rf /tmp/downloaded_packages/ /tmp/*.rds
     
 <span class="co">## Install packages from CRAN</span>
-<span class="kw">RUN</span> install2.r --error <span class="dt">\ </span>
-    <span class="kw">-r</span> <span class="st">'http://cran.rstudio.com'</span> \
-    <span class="co">##### ADD YOUR CRAN PACKAGES</span>
+<span class="ex">RUN</span> install2.r --error <span class="dt">\ </span>
+    <span class="ex">-r</span> <span class="st">'http://cran.rstudio.com'</span> \
+    ##### ADD YOUR CRAN PACKAGES
     <span class="co">##### &amp;&amp; Rscript -e &quot;devtools::install_github( ## ADD YOUR GITHUB PACKAGES )&quot; \</span>
-    <span class="co">## clean up</span>
-<span class="co">    &amp;&amp; rm -rf /tmp/downloaded_packages/ /tmp/*.rds</span>
+    ## <span class="ex">clean</span> up
+    <span class="kw">&amp;&amp;</span> <span class="fu">rm</span> -rf /tmp/downloaded_packages/ /tmp/*.rds
 
 <span class="co">## copy your shiny app folder below</span>
-<span class="kw">COPY</span> ./shiny/ /srv/shiny-server/myapp/</code></pre></div>
+<span class="ex">COPY</span> ./shiny/ /srv/shiny-server/myapp/</code></pre></div>
 <p>Hopefully more images can be added in the future, along with community contributions. They are rebuilt every commit to the <code>googleComputeEngineR</code> GitHub repo.</p>
 </div>
 <div id="create-your-shiny-app-and-place-in-subfolder-of-your-build-folder" class="section level3">

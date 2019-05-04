@@ -12,7 +12,7 @@
 
 <meta name="author" content="Mark Edmondson" />
 
-<meta name="date" content="2017-09-16" />
+<meta name="date" content="2019-05-04" />
 
 <title>Scheduled RStudio</title>
 
@@ -70,7 +70,7 @@ code > span.in { color: #60a0b0; font-weight: bold; font-style: italic; } /* Inf
 
 <h1 class="title toc-ignore">Scheduled RStudio</h1>
 <h4 class="author"><em>Mark Edmondson</em></h4>
-<h4 class="date"><em>2017-09-16</em></h4>
+<h4 class="date"><em>2019-05-04</em></h4>
 
 
 
@@ -119,29 +119,29 @@ vm &lt;-<span class="st"> </span><span class="kw">gce_vm</span>(<span class="st"
 <li><code>googleAnalyticsR</code> - for downloading Google Analytics data</li>
 <li><code>bnosac/cronR</code> - to help with creating cron jobs within RStudio.</li>
 </ul>
-<div class="sourceCode"><pre class="sourceCode sh"><code class="sourceCode bash"><span class="kw">FROM</span> rocker/tidyverse
-<span class="kw">MAINTAINER</span> Mark Edmondson (r@sunholo.com)
+<div class="sourceCode"><pre class="sourceCode sh"><code class="sourceCode bash"><span class="ex">FROM</span> rocker/tidyverse
+<span class="ex">MAINTAINER</span> Mark Edmondson (r@sunholo.com)
 
 <span class="co"># install cron and R package dependencies</span>
-<span class="kw">RUN</span> apt-get update <span class="kw">&amp;&amp;</span> <span class="kw">apt-get</span> install -y \
+<span class="ex">RUN</span> apt-get update <span class="kw">&amp;&amp;</span> <span class="ex">apt-get</span> install -y \
     cron \
     nano \
-    <span class="co">## clean up</span>
-    <span class="kw">&amp;&amp;</span> <span class="kw">apt-get</span> clean <span class="dt">\ </span>
-    <span class="kw">&amp;&amp;</span> <span class="kw">rm</span> -rf /var/lib/apt/lists/ <span class="dt">\ </span>
-    <span class="kw">&amp;&amp;</span> <span class="kw">rm</span> -rf /tmp/downloaded_packages/ /tmp/*.rds
+    ## clean up
+    <span class="kw">&amp;&amp;</span> <span class="ex">apt-get</span> clean <span class="dt">\ </span>
+    <span class="kw">&amp;&amp;</span> <span class="fu">rm</span> -rf /var/lib/apt/lists/ <span class="dt">\ </span>
+    <span class="kw">&amp;&amp;</span> <span class="fu">rm</span> -rf /tmp/downloaded_packages/ /tmp/*.rds
     
 <span class="co">## Install packages from CRAN</span>
-<span class="kw">RUN</span> install2.r --error <span class="dt">\ </span>
-    <span class="kw">-r</span> <span class="st">'http://cran.rstudio.com'</span> \
+<span class="ex">RUN</span> install2.r --error <span class="dt">\ </span>
+    <span class="ex">-r</span> <span class="st">'http://cran.rstudio.com'</span> \
     googleAuthR shinyFiles googleCloudStorageR bigQueryR gmailr googleAnalyticsR \
-    <span class="co">## install Github packages</span>
-    <span class="kw">&amp;&amp;</span> <span class="kw">Rscript</span> -e <span class="st">&quot;devtools::install_github(c('bnosac/cronR'))&quot;</span> \
-    <span class="co">## clean up</span>
-    <span class="kw">&amp;&amp;</span> <span class="kw">rm</span> -rf /tmp/downloaded_packages/ /tmp/*.rds \
+    ## install Github packages
+    <span class="kw">&amp;&amp;</span> <span class="ex">Rscript</span> -e <span class="st">&quot;devtools::install_github(c('bnosac/cronR'))&quot;</span> \
+    ## clean up
+    <span class="kw">&amp;&amp;</span> <span class="fu">rm</span> -rf /tmp/downloaded_packages/ /tmp/*.rds \
 
 <span class="co">## Start cron</span>
-<span class="kw">RUN</span> sudo service cron start</code></pre></div>
+<span class="ex">RUN</span> sudo service cron start</code></pre></div>
 </div>
 <div id="create-a-container-registry-build-trigger" class="section level3">
 <h3>Create a Container Registry build trigger</h3>
@@ -194,11 +194,11 @@ vm2 &lt;-<span class="st"> </span><span class="kw">gce_vm</span>(<span class="st
 
 ## authenticate
 ## using service account, ensure service account email added to GA account, BigQuery user permissions set, etc.
-googleAuthR::<span class="kw">gar_auth_service</span>(<span class="st">&quot;auth.json&quot;</span>)
+googleAuthR<span class="op">::</span><span class="kw">gar_auth_service</span>(<span class="st">&quot;auth.json&quot;</span>)
 
 ## get Google Analytics data
 gadata &lt;-<span class="st"> </span><span class="kw">google_analytics_4</span>(<span class="dv">123456</span>, 
-                             <span class="dt">date_range =</span> <span class="kw">c</span>(<span class="kw">Sys.Date</span>() -<span class="st"> </span><span class="dv">2</span>, <span class="kw">Sys.Date</span>() -<span class="st"> </span><span class="dv">1</span>),
+                             <span class="dt">date_range =</span> <span class="kw">c</span>(<span class="kw">Sys.Date</span>() <span class="op">-</span><span class="st"> </span><span class="dv">2</span>, <span class="kw">Sys.Date</span>() <span class="op">-</span><span class="st"> </span><span class="dv">1</span>),
                              <span class="dt">metrics =</span> <span class="st">&quot;sessions&quot;</span>,
                              <span class="dt">dimensions =</span> <span class="st">&quot;medium&quot;</span>,
                              <span class="dt">anti_sample =</span> <span class="ot">TRUE</span>)
@@ -215,7 +215,7 @@ gadata &lt;-<span class="st"> </span><span class="kw">google_analytics_4</span>(
 
 
 ## get top medium referrer
-top_ref &lt;-<span class="st"> </span><span class="kw">paste</span>(gadata[<span class="kw">order</span>(gadata$sessions, <span class="dt">decreasing =</span> <span class="ot">TRUE</span>),][<span class="dv">1</span>, ], <span class="dt">collapse =</span> <span class="st">&quot;,&quot;</span>)
+top_ref &lt;-<span class="st"> </span><span class="kw">paste</span>(gadata[<span class="kw">order</span>(gadata<span class="op">$</span>sessions, <span class="dt">decreasing =</span> <span class="ot">TRUE</span>),][<span class="dv">1</span>, ], <span class="dt">collapse =</span> <span class="st">&quot;,&quot;</span>)
 <span class="co"># 3456, organic</span>
 
 ## send email with todays figures

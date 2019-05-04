@@ -5,7 +5,12 @@ users:
   uid: 2000
 
 write_files:
-- path: /etc/systemd/system/rbase.service
+- path: /etc/gcer/startup.sh
+  permissions: 0755
+  owner: root
+  content: |
+%s
+- path: /etc/systemd/system/gcer.service
   permissions: 0644
   owner: root
   content: |
@@ -17,15 +22,11 @@ write_files:
     [Service]
     Restart=always
     Environment="HOME=/home/gcer"
-    ExecStartPre=/usr/share/google/dockercfg_update.sh
-    ExecStart=/usr/bin/docker run --name=r-base \
-                                  -e "R_LIBS_USER=/library/" \
-                                  -v /home/gcer/library/:/library/ \
-                                  --net=host \
-                                  %s
+    ExecStartPre=/usr/bin/docker-credential-gcr configure-docker
+    ExecStart=/etc/gcer/startup.sh
     ExecStop=/usr/bin/docker stop r-base
     ExecStopPost=/usr/bin/docker rm r-base
 
 runcmd:
 - systemctl daemon-reload
-- systemctl start rbase.service
+- systemctl start gcer.service

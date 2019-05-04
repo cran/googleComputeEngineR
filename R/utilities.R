@@ -1,10 +1,17 @@
+# read a file and turn into a character with an indent
+read_and_indent <- function(the_file, indent = 0){
+  tt <- readLines(the_file, warn = FALSE)
+  # indent and make one string
+  paste(paste(rep(" ", indent - 1), collapse =""), tt, collapse = "\n")
+}
+
 # is lowercase or hypens
 is.lower_hypen <- function(x){
   assertthat::assert_that(
     assertthat::is.string(x)
   )
   
-  grepl("^[a-z\\-]+$", x)
+  grepl("^[a-z0-9-]+$", x)
   
 }
 assertthat::on_failure(is.lower_hypen) <- function(call, env){
@@ -46,26 +53,6 @@ indent <- function(str, indent = 0) {
        str,
        perl = TRUE
   )
-}
-
-#' Get auth email
-#' If it includes '@' then assume the email, otherwise an environment file
-#' @param source where the email comes from
-#' @keywords internal
-auth_email <- function(source){
-  
-  if(Sys.getenv(source) == ""){
-    stop("No email found in the authentication file at Sys.getenv(", source, "). \nSet argument auth_email to the environment file containing your service account authentication JSON file e.g. 'GCE_AUTH_FILE', or supply the authentication email directly. e.g. 'example@blah.com'")
-  }
-  
-  if(!grepl("@", source)){
-    out <- jsonlite::fromJSON(Sys.getenv(source))$client_email
-  } else {
-    out <- source
-  }
-  
-  out
-  
 }
 
 #' Timestamp to R date

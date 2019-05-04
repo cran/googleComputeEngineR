@@ -12,7 +12,7 @@
 
 <meta name="author" content="Mark Edmondson" />
 
-<meta name="date" content="2017-09-16" />
+<meta name="date" content="2019-05-04" />
 
 <title>SSH, Docker, Container Registry and Futures</title>
 
@@ -70,7 +70,7 @@ code > span.in { color: #60a0b0; font-weight: bold; font-style: italic; } /* Inf
 
 <h1 class="title toc-ignore">SSH, Docker, Container Registry and Futures</h1>
 <h4 class="author"><em>Mark Edmondson</em></h4>
-<h4 class="date"><em>2017-09-16</em></h4>
+<h4 class="date"><em>2019-05-04</em></h4>
 
 
 
@@ -249,30 +249,30 @@ cont &lt;-<span class="st"> </span><span class="kw">containers</span>(vm)
 <span class="st">&quot;rstudio&quot;</span>
 
 ## see if its running
-<span class="kw">container_running</span>(con$rstudio)
+<span class="kw">container_running</span>(con<span class="op">$</span>rstudio)
 [<span class="dv">1</span>] <span class="ot">TRUE</span>
 
 ## get logs from container
-<span class="kw">container_logs</span>(con$rstudio)
+<span class="kw">container_logs</span>(con<span class="op">$</span>rstudio)
 
 ## get metadata
-<span class="kw">container_update_info</span>(con$rstudio)
-&lt;container&gt;
-<span class="st">  </span>ID:<span class="st">       </span>05c5437ac968 
-  Name:<span class="st">     </span>rstudio 
-  Image:<span class="st">    </span>rocker/rstudio 
-  Command:<span class="st">  </span><span class="er">/</span>init 
-  Host:<span class="st">     </span><span class="er">==</span>Google Compute Engine Instance==
+<span class="kw">container_update_info</span>(con<span class="op">$</span>rstudio)
+<span class="op">&lt;</span>container<span class="op">&gt;</span>
+<span class="st">  </span>ID<span class="op">:</span><span class="st">       </span>05c5437ac968 
+  Name<span class="op">:</span><span class="st">     </span>rstudio 
+  Image<span class="op">:</span><span class="st">    </span>rocker<span class="op">/</span>rstudio 
+  Command<span class="op">:</span><span class="st">  </span><span class="er">/</span>init 
+  Host<span class="op">:</span><span class="st">     </span><span class="er">==</span>Google Compute Engine Instance<span class="op">==</span>
 <span class="st">  </span>
-<span class="st">  </span>Name:<span class="st">                </span>rstudio-dev
-  Created:<span class="st">             </span><span class="dv">2016-10-07</span> <span class="dv">03</span>:<span class="dv">30</span>:<span class="dv">24</span>
-  Machine Type:<span class="st">        </span>f1-micro
-  Status:<span class="st">              </span>RUNNING
-  Zone:<span class="st">                </span>europe-west1-b
-  External IP:<span class="st">         </span><span class="fl">104.199.19.222</span>
-  Disks:<span class="st"> </span>
+<span class="st">  </span>Name<span class="op">:</span><span class="st">                </span>rstudio<span class="op">-</span>dev
+  Created<span class="op">:</span><span class="st">             </span><span class="dv">2016</span><span class="op">-</span><span class="dv">10</span><span class="op">-</span><span class="dv">07</span> <span class="dv">03</span><span class="op">:</span><span class="dv">30</span><span class="op">:</span><span class="dv">24</span>
+  Machine Type<span class="op">:</span><span class="st">        </span>f1<span class="op">-</span>micro
+  Status<span class="op">:</span><span class="st">              </span>RUNNING
+  Zone<span class="op">:</span><span class="st">                </span>europe<span class="op">-</span>west1<span class="op">-</span>b
+  External IP<span class="op">:</span><span class="st">         </span><span class="fl">104.199</span>.<span class="fl">19.222</span>
+  Disks<span class="op">:</span><span class="st"> </span>
 <span class="st">               </span>deviceName       type       mode boot autoDelete
-  <span class="dv">1</span> rstudio-dev-boot-disk PERSISTENT READ_WRITE <span class="ot">TRUE</span>       <span class="ot">TRUE</span></code></pre></div>
+  <span class="dv">1</span> rstudio<span class="op">-</span>dev<span class="op">-</span>boot<span class="op">-</span>disk PERSISTENT READ_WRITE <span class="ot">TRUE</span>       <span class="ot">TRUE</span></code></pre></div>
 </div>
 <div id="futures" class="section level2">
 <h2>Futures</h2>
@@ -289,7 +289,7 @@ vms &lt;-<span class="st"> </span><span class="kw">list</span>(vm1, vm2, vm3)
 <span class="kw">plan</span>(cluster, <span class="dt">workers =</span> vms)
 
 ## use futures %&lt;-% to send a function to the cluster
-si %&lt;-%<span class="st"> </span><span class="kw">Sys.info</span>()
+si <span class="op">%&lt;-%</span><span class="st"> </span><span class="kw">Sys.info</span>()
 <span class="kw">print</span>(si)
 
 ## tidy up

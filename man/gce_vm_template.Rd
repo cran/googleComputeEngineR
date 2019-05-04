@@ -5,8 +5,9 @@
 \title{Create a template container VM}
 \usage{
 gce_vm_template(template = c("rstudio", "shiny", "opencpu", "r-base",
-  "example", "dynamic", "ropensci"), username = NULL, password = NULL,
-  dynamic_image = NULL, image_family = "cos-stable", ...)
+  "dynamic", "rstudio-gpu", "rstudio-shiny"), username = NULL,
+  password = NULL, dynamic_image = NULL, image_family = "cos-stable",
+  wait = TRUE, ...)
 }
 \arguments{
 \item{template}{The template available}
@@ -15,19 +16,24 @@ gce_vm_template(template = c("rstudio", "shiny", "opencpu", "r-base",
 
 \item{password}{password if needed (RStudio)}
 
-\item{dynamic_image}{Supply an alternative to the default Docker image here to download}
+\item{dynamic_image}{Supply an alternative to the default Docker image for the template}
 
 \item{image_family}{An image-family.  It must come from the \code{cos-cloud} family.}
 
+\item{wait}{Whether to wait for the VM to launch before returning. Default \code{TRUE}.}
+
 \item{...}{Arguments passed on to \code{gce_vm_container}
 \describe{
-  \item{file}{file location of a cloud-init file. One of \code{file} or \code{cloud_init} must be supplied}
+  \item{file}{file location of a valid cloud-init or shell_script file. 
+One of \code{file} or \code{cloud_init} or \code{shell_script} must be supplied}
   \item{cloud_init}{contents of a cloud-init file, for example read via \code{readChar(file, nchars = 32768)}}
-  \item{image_family}{An image-family.  It must come from the \code{google-containers} family.}
+  \item{shell_script}{contents of a shell_script file, for example read via \code{readChar(file, nchars = 32768)}}
+  \item{image_family}{An image-family.  It must come from the \code{image_project} family.}
+  \item{image_project}{An image-project, where the image-family resides.}
 }}
 }
 \value{
-The VM object
+The VM object, or the VM startup operation if \code{wait=FALSE}
 }
 \description{
 This lets you specify templates for the VM you want to launch
@@ -38,15 +44,15 @@ Templates available are:
 
 \itemize{
   \item rstudio An RStudio server docker image with tidyverse and devtools
+  \item rstudio-gpu An RStudio server with popular R machine learning libraries and GPU driver.  Will launch a GPU enabled VM.
+  \item rstudio-shiny An RStudio server with Shiny also installed, proxied to /shiny
   \item shiny A Shiny docker image
   \item opencpu An OpenCPU docker image
   \item r_base Latest version of R stable
-  \item ropensci RStudio and tidyverse with all ropensci packages on CRAN and Github
-  \item example A non-R test container running busybox
-  \item dynamic Supply your own docker image to download such as \code{rocker/verse}
+  \item dynamic Supply your own docker image within dynamic_image
  }
  
- For \code{dynamic} templates you will need to launch the docker image with any ports you want opened, 
+For \code{dynamic} templates you will need to launch the docker image with any ports you want opened, 
    other settings etc. via \link{docker_run}.
 
 Use \code{dynamic_image} to override the default rocker images e.g. \code{rocker/shiny} for shiny, etc.

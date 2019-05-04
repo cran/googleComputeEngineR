@@ -48,16 +48,12 @@ Any Docker image can be run, it does not have to be an R one.
 \dontrun{
 # create a Dockerfile of your script
 if(!require(containeRit)){
-  devtools::install_github("o2r-project/containerit")
+  remotes::install_github("o2r-project/containerit")
   library(containeRit)
 }
 
-script <- system.file("schedulescripts", "schedule.R", package = "googleComputeEngineR")
 
-## put the "schedule.R" script in the working directory
-file.copy(script, getwd())
-
-
+## create your scheduled script, example below named schedule.R
 ## it will run the script whilst making the dockerfile
 container <- dockerfile("schedule.R",
                         copy = "script_dir",
@@ -89,3 +85,4 @@ gce_schedule_docker(docker_tag, schedule = "53 4 * * *", vm = vm)
 \seealso{
 Other scheduler functions: \code{\link{gce_vm_scheduler}}
 }
+\concept{scheduler functions}

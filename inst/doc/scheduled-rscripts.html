@@ -12,7 +12,7 @@
 
 <meta name="author" content="Mark Edmondson" />
 
-<meta name="date" content="2017-09-16" />
+<meta name="date" content="2019-05-04" />
 
 <title>Scheduled R scripts on Google Compute Engine</title>
 
@@ -70,7 +70,7 @@ code > span.in { color: #60a0b0; font-weight: bold; font-style: italic; } /* Inf
 
 <h1 class="title toc-ignore">Scheduled R scripts on Google Compute Engine</h1>
 <h4 class="author"><em>Mark Edmondson</em></h4>
-<h4 class="date"><em>2017-09-16</em></h4>
+<h4 class="date"><em>2019-05-04</em></h4>
 
 
 
@@ -102,7 +102,7 @@ code > span.in { color: #60a0b0; font-weight: bold; font-style: italic; } /* Inf
 something &lt;-<span class="st"> </span><span class="kw">tryCatch</span>({
     <span class="kw">gcs_get_object</span>(<span class="st">&quot;schedule/test.csv&quot;</span>, 
                    <span class="dt">bucket =</span> <span class="st">&quot;mark-edmondson-public-files&quot;</span>)
-  }, <span class="dt">error =</span> function(ex) {
+  }, <span class="dt">error =</span> <span class="cf">function</span>(ex) {
     <span class="ot">NULL</span>
   })
     
@@ -112,7 +112,7 @@ something_else &lt;-<span class="st"> </span><span class="kw">data.frame</span>(
 something &lt;-<span class="st"> </span><span class="kw">rbind</span>(something, something_else)
 
 ## authenticate on GCE for google cloud services
-googleAuthR::<span class="kw">gar_gce_auth</span>()
+googleAuthR<span class="op">::</span><span class="kw">gar_gce_auth</span>()
 
 tmp &lt;-<span class="st"> </span><span class="kw">tempfile</span>(<span class="dt">fileext =</span> <span class="st">&quot;.csv&quot;</span>)
 <span class="kw">on.exit</span>(<span class="kw">unlink</span>(tmp))
@@ -127,8 +127,8 @@ tmp &lt;-<span class="st"> </span><span class="kw">tempfile</span>(<span class="
 <h3>Schedule setup script</h3>
 <p>The above script can then be scheduled via the below.</p>
 <p>We first create a <code>Dockerfile</code> that holds all your scripts dependencies. This is the magic of <code>containeRit</code>:</p>
-<div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r">if(!<span class="kw">require</span>(containeRit)){
-  devtools::<span class="kw">install_github</span>(<span class="st">&quot;MarkEdmondson1234/containerit&quot;</span>) <span class="co">#use my fork until fix merged</span>
+<div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r"><span class="cf">if</span>(<span class="op">!</span><span class="kw">require</span>(containeRit)){
+  devtools<span class="op">::</span><span class="kw">install_github</span>(<span class="st">&quot;MarkEdmondson1234/containerit&quot;</span>) <span class="co">#use my fork until fix merged</span>
   <span class="kw">library</span>(containeRit)
 }
 
@@ -221,7 +221,7 @@ master &lt;-<span class="st"> </span><span class="kw">gce_vm</span>(<span class=
 <h2>Create scheduled script</h2>
 <p>Create the R script you want to schedule. Make sure it is self sufficient in that it can authenticate, do stuff and upload to a safe repository, such as Google Cloud Storage.</p>
 <p>This script will be in turn uploaded itself to Google Cloud Storage, so the slave instance can call it via a handy <code>googleCloudStorageR</code> function that runs a script locally from a cloud storage file:</p>
-<div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r">googleCloudStorageR::<span class="kw">gcs_source</span>(<span class="st">'download.R'</span>, <span class="dt">bucket =</span> <span class="st">'your-gcs-bucket'</span>)</code></pre></div>
+<div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r">googleCloudStorageR<span class="op">::</span><span class="kw">gcs_source</span>(<span class="st">'download.R'</span>, <span class="dt">bucket =</span> <span class="st">'your-gcs-bucket'</span>)</code></pre></div>
 <p>The example script below authenticates with Google Cloud Storage, downloads a <code>ga.httr-oauth</code> file that carries the Google Analytics authentication, runs the download then reauthenticates with Google Cloud Storage to upload the results. Modify for your own expensive operation.</p>
 <div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r">## download.R - called from slave VM
 <span class="kw">library</span>(googleCloudStorageR)
@@ -233,7 +233,7 @@ master &lt;-<span class="st"> </span><span class="kw">gce_vm</span>(<span class=
 <span class="kw">gcs_global_bucket</span>(<span class="st">&quot;your-gcs-bucket&quot;</span>)
 
 ## gcs can authenticate via GCE auth keys
-googleAuthR::<span class="kw">gar_gce_auth</span>()
+googleAuthR<span class="op">::</span><span class="kw">gar_gce_auth</span>()
 
 ## use GCS to download auth key (that you have previously uploaded)
 <span class="kw">gcs_get_object</span>(<span class="st">&quot;ga.httr-oauth&quot;</span>, <span class="dt">saveToDisk =</span> <span class="st">&quot;ga.httr-oauth&quot;</span>)
@@ -242,18 +242,18 @@ auth_token &lt;-<span class="st"> </span><span class="kw">readRDS</span>(<span c
 <span class="kw">options</span>(<span class="dt">googleAuthR.scopes.selected =</span> <span class="kw">c</span>(<span class="st">&quot;https://www.googleapis.com/auth/analytics&quot;</span>, 
                                         <span class="st">&quot;https://www.googleapis.com/auth/analytics.readonly&quot;</span>),
         <span class="dt">googleAuthR.httr_oauth_cache =</span> <span class="st">&quot;ga.httr-oauth&quot;</span>)
-googleAuthR::<span class="kw">gar_auth</span>(auth_token)
+googleAuthR<span class="op">::</span><span class="kw">gar_auth</span>(auth_token)
 
 ## fetch data
 
 gadata &lt;-<span class="st"> </span><span class="kw">google_analytics_4</span>(<span class="dv">81416156</span>,
-                             <span class="dt">date_range =</span> <span class="kw">c</span>(<span class="kw">Sys.Date</span>() -<span class="st"> </span><span class="dv">8</span>, <span class="kw">Sys.Date</span>() -<span class="st"> </span><span class="dv">1</span>),
+                             <span class="dt">date_range =</span> <span class="kw">c</span>(<span class="kw">Sys.Date</span>() <span class="op">-</span><span class="st"> </span><span class="dv">8</span>, <span class="kw">Sys.Date</span>() <span class="op">-</span><span class="st"> </span><span class="dv">1</span>),
                              <span class="dt">dimensions =</span> <span class="kw">c</span>(<span class="st">&quot;medium&quot;</span>, <span class="st">&quot;source&quot;</span>, <span class="st">&quot;landingPagePath&quot;</span>),
                              <span class="dt">metrics =</span> <span class="st">&quot;sessions&quot;</span>,
-                             <span class="dt">max =</span> -<span class="dv">1</span>)
+                             <span class="dt">max =</span> <span class="op">-</span><span class="dv">1</span>)
 
 ## back to Cloud Storage
-googleAuthR::<span class="kw">gar_gce_auth</span>()
+googleAuthR<span class="op">::</span><span class="kw">gar_gce_auth</span>()
 <span class="kw">gcs_upload</span>(gadata, <span class="dt">name =</span> <span class="st">&quot;uploads/gadata_81416156.csv&quot;</span>)
 <span class="kw">gcs_upload</span>(<span class="st">&quot;ga.httr-oauth&quot;</span>)
 
@@ -271,7 +271,7 @@ googleAuthR::<span class="kw">gar_gce_auth</span>()
 <span class="kw">gcs_global_bucket</span>(<span class="st">&quot;your-gcs-bucket&quot;</span>)
 
 ## auth to same project we're on
-googleAuthR::<span class="kw">gar_gce_auth</span>()
+googleAuthR<span class="op">::</span><span class="kw">gar_gce_auth</span>()
 
 ## launch the premade VM
 vm &lt;-<span class="st"> </span><span class="kw">gce_vm</span>(<span class="st">&quot;slave-1&quot;</span>)

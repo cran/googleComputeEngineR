@@ -59,6 +59,7 @@
 #' }
 #' 
 #' @export
+#' @import assertthat
 gce_vm <- function(name, 
                    ...,                           
                    project = gce_get_global_project(), 
@@ -70,44 +71,46 @@ gce_vm <- function(name,
     name <- name$name
   }
   
-  assertthat::assert_that(
-    assertthat::is.string(name),
-    assertthat::is.string(project),
-    assertthat::is.string(zone),
-    is.logical(open_webports)
+  assert_that(
+    is.string(name),
+    is.string(project),
+    is.string(zone),
+    is.flag(open_webports)
   )
   
-  stopped <- gce_list_instances("status eq TERMINATED", project = project, zone = zone)
+  existing_vm <- check_vm_exists(name, project = project, zone = zone)
   
-  if(name %in% stopped$items$name){
-    myMessage("VM previously created but not running, starting VM", level = 3)
-    job <- gce_vm_start(name, project = project, zone = zone)
-    gce_wait(job)
+  if(is.gce_instance(existing_vm)){
+    return(existing_vm)
   }
   
   vm <- tryCatch({
-    suppressMessages(suppressWarnings(gce_get_instance(name)))
+    suppressMessages(
+      suppressWarnings(
+        gce_get_instance(name, zone = zone, project = project)
+        )
+      )
   }, error = function(ex) {
     dots <- list(...)
     if(!is.null(dots[["template"]])){
       
       myMessage("Creating template VM", level = 3)
-      do.call(gce_vm_template, c(list(...), name = name))
+      do.call(gce_vm_template, c(list(...), name = name, zone = zone, project = project))
       ## gce_vm_template has its own gce_wait()
       
     } else if(any(!is.null(dots[["file"]]), !is.null(dots[["cloud_init"]]))){
       
       myMessage("Creating container VM", level = 3)
-      job <- do.call(gce_vm_container, c(list(...), name = name))
+      job <- do.call(gce_vm_container, c(list(...), name = name, zone = zone, project = project))
       gce_wait(job)
-      gce_get_instance(name)
+      gce_get_instance(name, zone = zone, project = project)
       
     } else {
       
       myMessage("Creating standard VM", level = 3)
-      job <- do.call(gce_vm_create, c(list(...), name = name))
+      job <- do.call(gce_vm_create, c(list(...), name = name, zone = zone, project = project))
       gce_wait(job)
-      gce_get_instance(name)
+      gce_get_instance(name, zone = zone, project = project)
       
     }
   })
@@ -117,7 +120,7 @@ gce_vm <- function(name,
     gce_make_firewall_webports(project = project)
   }
   
-  myMessage("VM running", level = 3)
+  myMessage(name, " VM running", level = 3)
   vm
 }
 
@@ -134,20 +137,28 @@ gce_vm <- function(name,
 #' }
 #' 
 #' 
-#' @param instance Name of the instance resource, or an instance object e.g. from \link{gce_get_instance}
+#' @param instances Name of the instance resource, or an instance object e.g. from \link{gce_get_instance}
 #' @param project Project ID for this request, default as set by \link{gce_get_global_project}
 #' @param zone The name of the zone for this request, default as set by \link{gce_get_global_zone}
 #' 
 #' @importFrom googleAuthR gar_api_generator
+#' @import assertthat
 #' @export
-gce_vm_delete <- function(instance,
+gce_vm_delete <- function(instances,
                           project = gce_get_global_project(), 
-                          zone = gce_get_global_zone() 
-                          ) {
+                          zone = gce_get_global_zone()) {
+  lapply(instances, gce_vm_delete_one, project = project, zone = zone)
+}
 
-  assertthat::assert_that(
-    assertthat::is.string(project),
-    assertthat::is.string(zone)
+
+
+gce_vm_delete_one <- function(instance,
+                          project, 
+                          zone) {
+
+  assert_that(
+    is.string(project),
+    is.string(zone)
   )
   
   url <- sprintf("https://www.googleapis.com/compute/v1/projects/%s/zones/%s/instances/%s", 
@@ -200,6 +211,11 @@ gce_vm_delete <- function(instance,
 #'  
 #' This creates a VM that may be shut down prematurely by Google - you will need to sort out how to save state if that happens in a shutdown script etc.  However, these are much cheaper. 
 #' 
+#' @section GPUs:
+#' 
+#' Some defaults for launching GPU enabled VMs are available at \link{gce_vm_gpu}
+#' 
+#' You can add GPUs to your instance, but they must be present in the zone you have specified - use \link{gce_list_gpus} to see which are available. Refer to \href{https://cloud.google.com/compute/docs/gpus/#introduction}{this} link for a list of current GPUs per zone.
 #' 
 #' @inheritParams Instance
 #' @inheritParams gce_make_machinetype_url
@@ -209,18 +225,20 @@ gce_vm_delete <- function(instance,
 #' @param disk_source Specifies a valid URL to an existing Persistent Disk resource.
 #' @param network The name of the network interface
 #' @param externalIP An external IP you have previously reserved, leave NULL to have one assigned or \code{"none"} for no external access.
+#' @param minCpuPlatform Specify a minimum CPU platform as per \href{these Google docs}{https://cloud.google.com/compute/docs/instances/specify-min-cpu-platform}
 #' @param project Project ID for this request
 #' @param zone The name of the zone for this request
 #' @param dry_run whether to just create the request JSON
-#' @param auth_email If it includes '@' then assume the email, otherwise an environment file var that includes the email
 #' @param disk_size_gb If not NULL, override default size of the boot disk (size in GB) 
 #' @param use_beta If set to TRUE will use the beta version of the API. Should not be used for production purposes.
-#' @param acceleratorCount \code{[BETA]} Number of GPUs to add to instance
-#' @param acceleratorType \code{[BETA]} Name of GPU to add, see \link{gce_list_gpus}
+#' @param acceleratorCount Number of GPUs to add to instance.  If using this, you may want to instead use \link{gce_vm_gpu} which sets some defaults for GPU instances.
+#' @param acceleratorType Name of GPU to add, see \link{gce_list_gpus}
 #' 
 #' @return A zone operation, or if the name already exists the VM object from \link{gce_get_instance}
 #' 
 #' @importFrom googleAuthR gar_api_generator
+#' @importFrom jsonlite unbox toJSON
+#' @import assertthat
 #' @export
 gce_vm_create <- function(name,
                           predefined_type = "f1-micro",
@@ -238,17 +256,17 @@ gce_vm_create <- function(name,
                           scheduling = NULL, 
                           serviceAccounts = NULL, 
                           tags = NULL,
-                          auth_email = "GCE_AUTH_FILE",
+                          minCpuPlatform = NULL,
                           project = gce_get_global_project(), 
                           zone = gce_get_global_zone(),
                           dry_run = FALSE,
                           disk_size_gb = NULL,
                           use_beta = FALSE,
                           acceleratorCount = NULL,
-                          acceleratorType = "nvidia-tesla-k80") {
+                          acceleratorType = "nvidia-tesla-p4") {
   
-  assertthat::assert_that(
-    assertthat::is.string(name)
+  assert_that(
+    is.string(name)
   )
   
   ## missing only works within function its called from
@@ -260,7 +278,7 @@ gce_vm_create <- function(name,
   guestAccelerators = NULL
   
   if(!is.null(acceleratorCount)){
-    acctype <- sprintf("https://www.googleapis.com/compute/beta/projects/%s/zones/%s/acceleratorTypes/%s",
+    acctype <- sprintf("projects/%s/zones/%s/acceleratorTypes/%s",
                        project, zone, acceleratorType)
     
     guestAccelerators <- list(
@@ -335,10 +353,10 @@ gce_vm_create <- function(name,
       initializeParams = initializeParams,
       source = disk_source,
       ## not in docs apart from https://cloud.google.com/compute/docs/instances/create-start-instance
-      autoDelete = jsonlite::unbox(TRUE),
-      boot       = jsonlite::unbox(TRUE),
-      type       = jsonlite::unbox("PERSISTENT"),
-      deviceName = jsonlite::unbox(paste0(name,"-boot-disk"))
+      autoDelete = unbox(TRUE),
+      boot       = unbox(TRUE),
+      type       = unbox("PERSISTENT"),
+      deviceName = unbox(paste0(name,"-boot-disk"))
     )
   )
 
@@ -356,12 +374,11 @@ gce_vm_create <- function(name,
   
   ## make serviceAccounts
   if(is.null(serviceAccounts)){
-    serviceAccounts = list(
-      list(
-        email = jsonlite::unbox(auth_email(auth_email)),
-        scopes = list("https://www.googleapis.com/auth/cloud-platform")
-      )
-    )
+    serviceAccounts = gce_make_serviceaccounts()
+  }
+  
+  if(!is.null(minCpuPlatform)){
+     assert_that(is.string(minCpuPlatform))
   }
 
   ## make instance object
@@ -371,13 +388,14 @@ gce_vm_create <- function(name,
                            metadata = metadata, 
                            disks = init_disk,
                            name = name, 
+                           minCpuPlatform = minCpuPlatform,
                            networkInterfaces = networkInterfaces, 
                            scheduling = scheduling, 
                            serviceAccounts = serviceAccounts, 
                            guestAccelerators = guestAccelerators,
                            tags = tags)
   if(dry_run){
-    return(jsonlite::toJSON(the_instance, pretty = TRUE))
+    return(toJSON(the_instance, pretty = TRUE))
   }
   
   # compute.instances.insert
@@ -385,7 +403,7 @@ gce_vm_create <- function(name,
                          "POST", 
                          data_parse_function = function(x) x)
   
-  assertthat::assert_that(
+  assert_that(
     inherits(the_instance, "gar_Instance")
   )
   
@@ -417,14 +435,21 @@ gce_vm_create <- function(name,
 #' }
 #' 
 #' 
-#' @param instance Name of the instance resource, or an instance object e.g. from \link{gce_get_instance}
+#' @param instances Name of the instance resource, or an instance object e.g. from \link{gce_get_instance}
 #' @param project Project ID for this request, default as set by \link{gce_get_global_project}
 #' @param zone The name of the zone for this request, default as set by \link{gce_get_global_zone}
 #' @importFrom googleAuthR gar_api_generator
 #' @export
-gce_vm_reset <- function(instance,
+gce_vm_reset <- function(instances,
                          project = gce_get_global_project(), 
-                         zone = gce_get_global_zone()) {
+                         zone = gce_get_global_zone()){
+  lapply(instances, gce_vm_reset_one, project = project, zone = zone)
+}
+
+
+gce_vm_reset_one <- function(instance,
+                         project, 
+                         zone) {
 
   url <- sprintf("https://www.googleapis.com/compute/v1/projects/%s/zones/%s/instances/%s/reset", 
                  project, zone, as.gce_instance_name(instance))
@@ -453,7 +478,7 @@ gce_vm_reset <- function(instance,
 #' }
 #' 
 #' 
-#' @param instance Name of the instance resource, or an instance object e.g. from \link{gce_get_instance}
+#' @param instances Name of the instance resource, or an instance object e.g. from \link{gce_get_instance}
 #' @param project Project ID for this request, default as set by \link{gce_get_global_project}
 #' @param zone The name of the zone for this request, default as set by \link{gce_get_global_zone}
 #' 
@@ -461,9 +486,15 @@ gce_vm_reset <- function(instance,
 #' 
 #' @importFrom googleAuthR gar_api_generator
 #' @export
-gce_vm_start <- function(instance,
+gce_vm_start <- function(instances,
                          project = gce_get_global_project(), 
-                         zone = gce_get_global_zone()
+                         zone = gce_get_global_zone()){
+  lapply(instances, gce_vm_start_one, project = project, zone = zone)
+}
+
+gce_vm_start_one <- function(instance,
+                         project, 
+                         zone
                          ) {
 
   url <- sprintf("https://www.googleapis.com/compute/v1/projects/%s/zones/%s/instances/%s/start", 
@@ -493,18 +524,25 @@ gce_vm_start <- function(instance,
 #'   such as persistent disks and static IP addresses, 
 #'   will continue to be charged until they are deleted.
 #'   
-#' @param instance Name of the instance resource, or an instance object e.g. from \link{gce_get_instance}
+#' @param instances Names of the instance resource, or an instance object e.g. from \link{gce_get_instance}
 #' @param project Project ID for this request, default as set by \link{gce_get_global_project}
 #' @param zone The name of the zone for this request, default as set by \link{gce_get_global_zone}
 #' 
 #' @importFrom googleAuthR gar_api_generator
 #' @export
-gce_vm_stop <- function(instance,
+gce_vm_stop <- function(instances,
                         project = gce_get_global_project(), 
-                        zone = gce_get_global_zone() 
-                        ) {
-
+                        zone = gce_get_global_zone()){
   
+  lapply(instances, gce_vm_stop_one, project = project, zone = zone)
+}
+
+
+
+gce_vm_stop_one <- function(instance,
+                        project, 
+                        zone) {
+
   url <- 
     sprintf("https://www.googleapis.com/compute/v1/projects/%s/zones/%s/instances/%s/stop",
             project, zone, as.gce_instance_name(instance))
@@ -523,19 +561,17 @@ gce_vm_stop <- function(instance,
 #' 
 #' @param instance The VM to see serial console output for
 #' @param open_browser Whether to return a URL or open the browser
-#' @param project Project ID for this request, default as set by \link{gce_get_global_project}
-#' @param zone The name of the zone for this request, default as set by \link{gce_get_global_zone}
 #' 
 #' @return a URL
 #' @export
 gce_vm_logs <- function(instance, 
-                        open_browser = TRUE, 
-                        project = gce_get_global_project(), 
-                        zone = gce_get_global_zone() ){
+                        open_browser = TRUE){
+  
+  pz <- gce_extract_projectzone(instance)
   
   the_name <- as.gce_instance_name(instance)
   the_url <- sprintf("https://console.cloud.google.com/compute/instancesDetail/zones/%s/instances/%s/console?project=%s",
-                     zone, the_name, project)
+                     pz$zone, the_name, pz$project)
   
   if(open_browser){
     if(!is.null(getOption("browser"))){

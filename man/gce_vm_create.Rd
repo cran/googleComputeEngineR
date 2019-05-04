@@ -5,14 +5,14 @@
 \title{Creates an instance resource in the specified project using the data included in the request.}
 \usage{
 gce_vm_create(name, predefined_type = "f1-micro",
-  image_project = "debian-cloud", image_family = "debian-8", cpus = NULL,
-  memory = NULL, image = "", disk_source = NULL, network = "default",
-  externalIP = NULL, canIpForward = NULL, description = NULL,
-  metadata = NULL, scheduling = NULL, serviceAccounts = NULL,
-  tags = NULL, auth_email = "GCE_AUTH_FILE",
+  image_project = "debian-cloud", image_family = "debian-8",
+  cpus = NULL, memory = NULL, image = "", disk_source = NULL,
+  network = "default", externalIP = NULL, canIpForward = NULL,
+  description = NULL, metadata = NULL, scheduling = NULL,
+  serviceAccounts = NULL, tags = NULL, minCpuPlatform = NULL,
   project = gce_get_global_project(), zone = gce_get_global_zone(),
   dry_run = FALSE, disk_size_gb = NULL, use_beta = FALSE,
-  acceleratorCount = NULL, acceleratorType = "nvidia-tesla-k80")
+  acceleratorCount = NULL, acceleratorType = "nvidia-tesla-p4")
 }
 \arguments{
 \item{name}{The name of the resource, provided by the client when initially creating the resource}
@@ -47,7 +47,7 @@ gce_vm_create(name, predefined_type = "f1-micro",
 
 \item{tags}{A list of tags to apply to this instance}
 
-\item{auth_email}{If it includes '@' then assume the email, otherwise an environment file var that includes the email}
+\item{minCpuPlatform}{Specify a minimum CPU platform as per \href{these Google docs}{https://cloud.google.com/compute/docs/instances/specify-min-cpu-platform}}
 
 \item{project}{Project ID for this request}
 
@@ -59,9 +59,9 @@ gce_vm_create(name, predefined_type = "f1-micro",
 
 \item{use_beta}{If set to TRUE will use the beta version of the API. Should not be used for production purposes.}
 
-\item{acceleratorCount}{\code{[BETA]} Number of GPUs to add to instance}
+\item{acceleratorCount}{Number of GPUs to add to instance.  If using this, you may want to instead use \link{gce_vm_gpu} which sets some defaults for GPU instances.}
 
-\item{acceleratorType}{\code{[BETA]} Name of GPU to add, see \link{gce_list_gpus}}
+\item{acceleratorType}{Name of GPU to add, see \link{gce_list_gpus}}
 }
 \value{
 A zone operation, or if the name already exists the VM object from \link{gce_get_instance}
@@ -102,6 +102,14 @@ To create an instance you need to specify:
 You can set \href{https://cloud.google.com/compute/docs/instances/create-start-preemptible-instance}{preemptible} VMs by passing this in the \code{scheduling} arguments \code{scheduling = list(preemptible = TRUE)}
  
 This creates a VM that may be shut down prematurely by Google - you will need to sort out how to save state if that happens in a shutdown script etc.  However, these are much cheaper.
+}
+
+\section{GPUs}{
+
+
+Some defaults for launching GPU enabled VMs are available at \link{gce_vm_gpu}
+
+You can add GPUs to your instance, but they must be present in the zone you have specified - use \link{gce_list_gpus} to see which are available. Refer to \href{https://cloud.google.com/compute/docs/gpus/#introduction}{this} link for a list of current GPUs per zone.
 }
 
 \seealso{

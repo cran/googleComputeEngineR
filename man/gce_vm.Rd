@@ -18,14 +18,14 @@ gce_vm(name, ..., project = gce_get_global_project(),
   \item{disk_source}{Specifies a valid URL to an existing Persistent Disk resource.}
   \item{network}{The name of the network interface}
   \item{externalIP}{An external IP you have previously reserved, leave NULL to have one assigned or \code{"none"} for no external access.}
+  \item{minCpuPlatform}{Specify a minimum CPU platform as per \href{these Google docs}{https://cloud.google.com/compute/docs/instances/specify-min-cpu-platform}}
   \item{project}{Project ID for this request}
   \item{zone}{The name of the zone for this request}
   \item{dry_run}{whether to just create the request JSON}
-  \item{auth_email}{If it includes '@' then assume the email, otherwise an environment file var that includes the email}
   \item{disk_size_gb}{If not NULL, override default size of the boot disk (size in GB)}
   \item{use_beta}{If set to TRUE will use the beta version of the API. Should not be used for production purposes.}
-  \item{acceleratorCount}{\code{[BETA]} Number of GPUs to add to instance}
-  \item{acceleratorType}{\code{[BETA]} Name of GPU to add, see \link{gce_list_gpus}}
+  \item{acceleratorCount}{Number of GPUs to add to instance.  If using this, you may want to instead use \link{gce_vm_gpu} which sets some defaults for GPU instances.}
+  \item{acceleratorType}{Name of GPU to add, see \link{gce_list_gpus}}
   \item{name}{The name of the resource, provided by the client when initially creating the resource}
   \item{canIpForward}{Allows this instance to send and receive packets with non-matching destination or source IPs}
   \item{description}{An optional description of this resource}
